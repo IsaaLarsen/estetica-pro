@@ -82,7 +82,9 @@
             <a href="{{ route('funcionarios.index') }}" class="nav-item active">
                 <i class="fas fa-users"></i><span>Funcionários</span>
             </a>
-            <a href="#" class="nav-item"><i class="fas fa-scissors"></i><span>Serviços</span></a>
+            <a href="{{ route('servicos.index') }}" class="nav-item">
+                <i class="fas fa-scissors"></i><span>Serviços</span>
+    </a>
             <a href="#" class="nav-item"><i class="fas fa-calendar-alt"></i><span>Agenda</span></a>
             <a href="#" class="nav-item"><i class="fas fa-hand-holding-usd"></i><span>Comissões</span></a>
             <a href="#" class="nav-item"><i class="fas fa-user"></i><span>Clientes</span></a>
@@ -104,7 +106,7 @@
             <div class="user-info">
                 <div class="user-avatar">EP</div>
                 <div class="user-details">
-                    <h3>Administrador</h3>
+                    <h3>{{ $usuario->nome }}</h3>
                     <p>Administrador</p>
                 </div>
             </div>

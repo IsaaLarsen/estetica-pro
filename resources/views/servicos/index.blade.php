@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Funcionários - Estética PRO</title>
+    <title>Serviços - Estética PRO</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -234,6 +234,8 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 16px;
         }
 
         .page-title {
@@ -247,6 +249,7 @@
         .header-actions {
             display: flex;
             gap: 16px;
+            flex-wrap: wrap;
         }
 
         .search-box {
@@ -285,6 +288,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             border: none;
+            text-decoration: none;
         }
 
         .btn-primary {
@@ -341,37 +345,26 @@
 
         tbody tr:hover {
             background: #f9fafb;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
         }
 
         td {
             padding: 16px;
         }
 
-        .employee-info {
+        .service-info {
             display: flex;
             align-items: center;
         }
 
-        .employee-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
-            margin-right: 12px;
-        }
-
-        .employee-details h3 {
+        .service-details h3 {
             font-size: 16px;
             font-weight: 500;
             margin-bottom: 4px;
         }
 
-        .employee-details p {
+        .service-details p {
             font-size: 14px;
             color: var(--text-light);
         }
@@ -399,7 +392,7 @@
             display: flex;
             gap: 8px;
         }
-        
+
         .action-btn-table {
             width: 34px;
             height: 34px;
@@ -412,22 +405,22 @@
             background: none;
             border: none;
         }
-        
+
         .action-edit {
             color: var(--primary);
             background: var(--primary-light);
         }
-        
+
         .action-edit:hover {
             background: var(--primary);
             color: white;
         }
-        
+
         .action-delete {
             color: var(--danger);
             background: #fee2e2;
         }
-        
+
         .action-delete:hover {
             background: var(--danger);
             color: white;
@@ -459,6 +452,28 @@
         .pagination-item.active {
             background: var(--primary);
             color: white;
+        }
+
+        /* Mensagens */
+        .alert {
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .alert-success {
+            background-color: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .alert-error {
+            background-color: #fef3c7;
+            color: #7c2d12;
+            border: 1px solid #fde68a;
         }
 
         /* Responsivo */
@@ -507,13 +522,15 @@
         </div>
 
         <nav class="sidebar-nav">
-            <a href="{{ route('dashboard') }}" class="nav-item">
+            <a href="{{ route('dashboard') }}" class="nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
                 <i class="fas fa-chart-line"></i><span>Dashboard</span>
             </a>
-            <a href="{{ route('funcionarios.index') }}" class="nav-item active">
+            <a href="{{ route('funcionarios.index') }}"
+                class="nav-item {{ request()->routeIs('funcionarios.*') ? 'active' : '' }}">
                 <i class="fas fa-users"></i><span>Funcionários</span>
             </a>
-            <a href="{{ route('servicos.index') }}" class="nav-item">
+            <a href="{{ route('servicos.index') }}"
+                class="nav-item {{ request()->routeIs('servicos.*') ? 'active' : '' }}">
                 <i class="fas fa-scissors"></i><span>Serviços</span>
             </a>
             <a href="#" class="nav-item">
@@ -527,24 +544,23 @@
             </a>
         </nav>
 
-        <div class="sidebar-footer">
-            <form method="GET" action="{{ route('logout') }}" style="width:100%;">
-                <button type="submit" class="nav-item"
-                    style="width:100%; background:none; border:none; color:white; display:flex; align-items:center; text-align:left; cursor:pointer;">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Sair</span>
-                </button>
-            </form>
-        </div>
+        <div class="menu-divider"></div>
+                    <form method="GET" action="{{ route('logout') }}" style="width:100%;">
+                        <button type="submit" class="menu-item">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>Sair</span>
+                        </button>
+                    </form>
     </aside>
 
     <!-- Conteúdo principal -->
-    <div class="main-content">
+     <div class="main-content">
+        <!-- Topbar -->
         <div class="topbar">
             <div class="user-info">
                 <div class="user-avatar">EP</div>
                 <div class="user-details">
-                    <h3>{{ $usuario->nome ?? 'Administrador' }}</h3>
+                    <h3>{{ $usuario->nome }}</h3>
                     <p>Administrador</p>
                 </div>
             </div>
@@ -559,7 +575,8 @@
                         <span>Editar Senha</span>
                     </div>
                     <div class="menu-divider"></div>
-                    <form method="GET" action="{{ route('logout') }}" style="width:100%;">
+                    <form method="POST" action="{{ route('logout') }}" style="width:100%;">
+                        @csrf
                         <button type="submit" class="menu-item">
                             <i class="fas fa-sign-out-alt"></i>
                             <span>Sair</span>
@@ -571,71 +588,80 @@
 
         <div class="content">
             <div class="page-header">
-                <h1 class="page-title">Funcionários</h1>
+                <h1 class="page-title">Serviços</h1>
                 <div class="header-actions">
                     <div class="search-box">
                         <i class="fas fa-search search-icon"></i>
-                        <input type="text" class="search-input" placeholder="Buscar funcionário...">
+                        <input type="text" class="search-input" placeholder="Buscar serviço..." id="searchInput">
                     </div>
-                    <a href="{{ route('funcionarios.create') }}" class="btn btn-primary" style="text-decoration: none;">
+                    <a href="{{ route('servicos.create') }}" class="btn btn-primary">
                         <i class="fas fa-plus btn-icon"></i>
-                        Novo Funcionário
+                        Novo Serviço
                     </a>
                 </div>
             </div>
+
+            <!-- Mensagens de alerta -->
+            @if (session('success'))
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i>
+                    <span>{{ session('success') }}</span>
+                </div>
+            @endif
+
+            @if (session('error'))
+                <div class="alert alert-error">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>{{ session('error') }}</span>
+                </div>
+            @endif
 
             <div class="table-container">
                 <table>
                     <thead>
                         <tr>
-                            <th>Funcionário</th>
-                            <th>CPF</th>
-                            <th>Cargo</th>
-                            <th>Especialidade</th>
+                            <th>Serviço</th>
+                            <th>Valor (R$)</th>
+                            <th>% Comissão</th>
+                            <th>Duração (min)</th>
                             <th>Status</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($funcionarios as $f)
+                        @forelse($servicos as $s)
                             <tr>
                                 <td>
-                                    <div class="employee-info">
-                                        <div class="employee-avatar">
-                                            {{ strtoupper(mb_substr(explode(' ', $f->nome)[0] ?? '', 0, 1)) }}{{ strtoupper(mb_substr(explode(' ', $f->nome)[1] ?? '', 0, 1)) }}
-                                        </div>
-                                        <div class="employee-details">
-                                            <h3>{{ $f->nome }}</h3>
-                                            <p>{{ $f->email ?? '—' }}</p>
+                                    <div class="service-info">
+                                        <div class="service-details">
+                                            <h3>{{ $s->nome }}</h3>
+                                            <p>{{ Str::limit($s->descricao, 30) ?? '—' }}</p>
                                         </div>
                                     </div>
                                 </td>
-                                <td>{{ $f->cpf }}</td>
-                                <td>{{ $f->cargo ?? '—' }}</td>
-                                <td>{{ $f->especialidade ?? '—' }}</td>
+                                <td>R$ {{ number_format($s->valor, 2, ',', '.') }}</td>
+                                <td>{{ number_format($s->comissao_percent, 2, ',', '.') }}%</td>
+                                <td>{{ $s->duracao_minutos }}</td>
                                 <td>
-                                    @php $ativo = $f->ativo ?? 1; @endphp
-                                    <span class="status-badge {{ $ativo ? 'status-active' : 'status-inactive' }}">
-                                        {{ $ativo ? 'Ativo' : 'Inativo' }}
+                                    <span class="status-badge {{ $s->ativo ? 'status-active' : 'status-inactive' }}">
+                                        {{ $s->ativo ? 'Ativo' : 'Inativo' }}
                                     </span>
                                 </td>
                                 <td>
                                     <div class="actions">
                                         <!-- Editar -->
-                                        <a href="{{ route('funcionarios.edit', $f->id) }}" 
-                                           class="action-btn-table action-edit" 
-                                           title="Editar">
+                                        <a href="{{ route('servicos.edit', $s->id) }}" class="action-btn-table action-edit"
+                                            title="Editar">
                                             <i class="fas fa-pen-to-square"></i>
                                         </a>
 
                                         <!-- Excluir -->
-                                        <form action="{{ route('funcionarios.destroy', $f->id) }}" method="POST" style="display:inline;">
+                                        <form action="{{ route('servicos.destroy', $s->id) }}" method="POST"
+                                            style="display:inline;">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" 
-                                                    class="action-btn-table action-delete" 
-                                                    title="Excluir"
-                                                    onclick="return confirm('Tem certeza que deseja excluir este funcionário?')">
+                                            <button type="submit" class="action-btn-table action-delete" title="Excluir"
+                                                onclick="return confirm('Tem certeza que deseja excluir este serviço?')">
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>
                                         </form>
@@ -645,9 +671,9 @@
                         @empty
                             <tr>
                                 <td colspan="6" style="text-align:center; padding: 32px; color: var(--text-light);">
-                                    <i class="fas fa-users"
+                                    <i class="fas fa-scissors"
                                         style="font-size:28px; color:#e5e7eb; display:block; margin-bottom:10px;"></i>
-                                    Nenhum funcionário cadastrado.
+                                    Nenhum serviço cadastrado.
                                 </td>
                             </tr>
                         @endforelse
@@ -655,23 +681,51 @@
                 </table>
             </div>
 
-            <div class="pagination">
-                <div class="pagination-item"><i class="fas fa-chevron-left"></i></div>
-                <div class="pagination-item active">1</div>
-                <div class="pagination-item">2</div>
-                <div class="pagination-item">3</div>
-                <div class="pagination-item"><i class="fas fa-chevron-right"></i></div>
-            </div>
+            {{-- Paginação: só renderiza se $servicos for um paginator --}}
+            @if (method_exists($servicos, 'hasPages') && $servicos->hasPages())
+                <div class="pagination">
+                    {{-- Anterior --}}
+                    @if($servicos->onFirstPage())
+                        <div class="pagination-item disabled"><i class="fas fa-chevron-left"></i></div>
+                    @else
+                        <a href="{{ $servicos->previousPageUrl() }}" class="pagination-item">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    @endif
+
+                    {{-- Números de página --}}
+                    @for ($i = 1; $i <= $servicos->lastPage(); $i++)
+                        @if ($i == $servicos->currentPage())
+                            <div class="pagination-item active">{{ $i }}</div>
+                        @else
+                            <a href="{{ $servicos->url($i) }}" class="pagination-item">{{ $i }}</a>
+                        @endif
+                    @endfor
+
+                    {{-- Próximo --}}
+                    @if($servicos->hasMorePages())
+                        <a href="{{ $servicos->nextPageUrl() }}" class="pagination-item">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    @else
+                        <div class="pagination-item disabled"><i class="fas fa-chevron-right"></i></div>
+                    @endif
+                </div>
+            @endif
+
         </div>
     </div>
 
     <script>
         const settingsBtn = document.getElementById('settingsBtn');
         const settingsMenu = document.getElementById('settingsMenu');
+
+        // Configuração do menu
         settingsBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             settingsMenu.classList.toggle('active');
         });
+
         document.addEventListener('click', function (e) {
             if (!settingsMenu.contains(e.target) && e.target !== settingsBtn) {
                 settingsMenu.classList.remove('active');
@@ -679,7 +733,7 @@
         });
 
         // Busca local
-        const searchInput = document.querySelector('.search-input');
+        const searchInput = document.getElementById('searchInput');
         if (searchInput) {
             searchInput.addEventListener('input', function () {
                 const term = this.value.toLowerCase();
@@ -689,6 +743,12 @@
                 });
             });
         }
+
+        // Função para editar senha (exemplo)
+        document.getElementById('editPasswordBtn').addEventListener('click', function () {
+            alert('Funcionalidade de editar senha será implementada aqui.');
+            settingsMenu.classList.remove('active');
+        });
     </script>
 </body>
 
