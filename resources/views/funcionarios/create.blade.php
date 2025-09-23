@@ -5,8 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ isset($funcionario) ? 'Editar Funcionário' : 'Cadastrar Funcionário' }} - Estética PRO</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* === Layout (igual ao seu) === */
@@ -59,13 +58,26 @@
         label { display:block; font-weight:500; margin-bottom:8px; color:var(--text); }
         input,select,textarea { width:100%; padding:14px 16px; border:2px solid #e5e7eb; border-radius:12px; font-size:14px; transition:.2s; font-family:'Poppins',sans-serif; }
         input:focus,select:focus,textarea:focus { border-color:var(--primary); outline:none; box-shadow:0 0 0 3px rgba(236,72,153,0.2); }
-        .checkbox-group { display:flex; align-items:center; gap:10px; background:#f9fafb; padding:15px 20px; border-radius:12px; border:2px solid #e5e7eb; }
-        .checkbox { width:20px; height:20px; accent-color:var(--primary); }
+        
+        /* === Switch personalizado === */
+        .form-switch-container { display:flex; justify-content:center; margin:20px 0; }
+        .form-switch { display:flex; align-items:center; gap:10px; background:#f9fafb; padding:12px 20px; border-radius:12px; border:2px solid #e5e7eb; }
+        .switch { position:relative; display:inline-block; width:50px; height:24px; }
+        .switch input { opacity:0; width:0; height:0; }
+        .slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#ccc; transition:.4s; border-radius:24px; }
+        .slider:before { position:absolute; content:""; height:18px; width:18px; left:3px; bottom:3px; background-color:white; transition:.4s; border-radius:50%; }
+        input:checked + .slider { background:linear-gradient(135deg,var(--primary) 0%, var(--secondary) 100%); }
+        input:checked + .slider:before { transform:translateX(26px); }
+        .form-switch { display:flex; align-items:center; }
+        .form-switch label[for="ativo"] { margin-bottom:0; font-weight:600; display:flex; align-items:center; }
+        
         .form-actions { display:flex; justify-content:flex-end; margin-top:20px; }
         .btn { display:inline-flex; align-items:center; justify-content:center; padding:14px 24px; border:none; border-radius:12px; font-weight:500; cursor:pointer; transition:.3s; font-size:16px; }
         .btn-primary { background:linear-gradient(135deg,var(--primary)0%,var(--secondary)100%); color:white; box-shadow:0 4px 14px rgba(236,72,153,0.4); }
         .btn-primary:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(236,72,153,0.5); }
         .btn-icon { margin-right:8px; }
+        .alert { padding:12px 14px; border-radius:10px; border:1px solid #f59e0b33; background:#fffbeb; color:#92400e; font-size:14px; }
+        .alert a { color:#7e22ce; text-decoration:underline; }
     </style>
 </head>
 
@@ -84,10 +96,20 @@
             </a>
             <a href="{{ route('servicos.index') }}" class="nav-item">
                 <i class="fas fa-scissors"></i><span>Serviços</span>
-    </a>
-            <a href="#" class="nav-item"><i class="fas fa-calendar-alt"></i><span>Agenda</span></a>
+            </a>
+            <a href="{{ route('cargos.index') }}" class="nav-item">
+                <i class="fas fa-briefcase"></i><span>Cargos</span>
+            </a>
+            <a href="{{ route('agenda.index') }}" class="nav-item {{ request()->routeIs('agenda.*') ? 'active' : '' }}">
+                <i class="fas fa-calendar-alt"></i><span>Agenda</span>
+            </a>
             <a href="#" class="nav-item"><i class="fas fa-hand-holding-usd"></i><span>Comissões</span></a>
-            <a href="#" class="nav-item"><i class="fas fa-user"></i><span>Clientes</span></a>
+            <a href="{{ route('clientes.index') }}" class="nav-item">
+                <i class="fas fa-user"></i><span>Clientes</span>
+            </a>
+            <a href="{{ route('cargos.index') }}" class="nav-item {{ request()->routeIs('cargos.*') ? 'active' : '' }}">
+                <i class="fas fa-briefcase"></i><span>Cargos</span>
+            </a>
         </nav>
         <div class="sidebar-footer">
             <form method="GET" action="{{ route('logout') }}" style="width:100%;">
@@ -153,56 +175,86 @@
                             <label for="nome">Nome Completo</label>
                             <input type="text" id="nome" name="nome" required placeholder="Digite o nome completo"
                                    value="{{ old('nome', $funcionario->nome ?? '') }}">
+                            @error('nome') <small class="text-danger">{{ $message }}</small> @enderror
                         </div>
+
                         <div class="form-group">
                             <label for="cpf">CPF</label>
                             <input type="text" id="cpf" name="cpf" required placeholder="000.000.000-00"
                                    value="{{ old('cpf', $funcionario->cpf ?? '') }}">
+                            @error('cpf') <small class="text-danger">{{ $message }}</small> @enderror
                         </div>
+
                         <div class="form-group">
                             <label for="email">E-mail</label>
                             <input type="email" id="email" name="email" required placeholder="funcionario@esteticapro.com"
                                    value="{{ old('email', $funcionario->email ?? '') }}">
+                            @error('email') <small class="text-danger">{{ $message }}</small> @enderror
                         </div>
+
                         <div class="form-group">
                             <label for="telefone">Telefone</label>
-                            <input type="text" id="telefone" name="telefone" required placeholder="(00) 00000-0000"
+                            <input type="text" id="telefone" name="telefone" placeholder="(00) 00000-0000"
                                    value="{{ old('telefone', $funcionario->telefone ?? '') }}">
+                            @error('telefone') <small class="text-danger">{{ $message }}</small> @enderror
                         </div>
+
                         <div class="form-group">
                             <label for="cargo">Cargo</label>
-                            <select id="cargo" name="cargo" required>
-                                <option value="">Selecione um cargo</option>
-                                <option value="cabeleireiro" {{ old('cargo', $funcionario->cargo ?? '') == 'cabeleireiro' ? 'selected' : '' }}>Cabeleireiro(a)</option>
-                                <option value="esteticista" {{ old('cargo', $funcionario->cargo ?? '') == 'esteticista' ? 'selected' : '' }}>Esteticista</option>
-                                <option value="manicure" {{ old('cargo', $funcionario->cargo ?? '') == 'manicure' ? 'selected' : '' }}>Manicure</option>
-                                <option value="massoterapeuta" {{ old('cargo', $funcionario->cargo ?? '') == 'massoterapeuta' ? 'selected' : '' }}>Massoterapeuta</option>
-                                <option value="recepcionista" {{ old('cargo', $funcionario->cargo ?? '') == 'recepcionista' ? 'selected' : '' }}>Recepcionista</option>
-                                <option value="gerente" {{ old('cargo', $funcionario->cargo ?? '') == 'gerente' ? 'selected' : '' }}>Gerente</option>
-                            </select>
+
+                            @if(isset($cargos) && count($cargos))
+                                <select id="cargo" name="cargo" required>
+                                    <option value="">Selecione um cargo</option>
+                                    @foreach($cargos as $nomeCargo)
+                                        <option value="{{ $nomeCargo }}"
+                                            {{ old('cargo', $funcionario->cargo ?? '') === $nomeCargo ? 'selected' : '' }}>
+                                            {{ $nomeCargo }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            @else
+                                <div class="alert" role="alert">
+                                    Nenhum cargo ativo encontrado. 
+                                    Cadastre em <a href="{{ route('cargos.create') }}">Cargos → Novo Cargo</a> e volte aqui.
+                                </div>
+                                <select id="cargo" name="cargo" disabled>
+                                    <option value="">— sem cargos —</option>
+                                </select>
+                            @endif
+
+                            @error('cargo') <small class="text-danger">{{ $message }}</small> @enderror
                         </div>
-                        <div class="form-group">
-                            <label for="especialidade">Especialidade</label>
-                            <input type="text" id="especialidade" name="especialidade"
-                                   placeholder="Ex: Coloração, Limpeza de Pele"
-                                   value="{{ old('especialidade', $funcionario->especialidade ?? '') }}">
-                        </div>
+
+                        <!-- REMOVIDO: campo Especialidade -->
+
                         <div class="form-group full-width">
                             <label for="endereco">Endereço</label>
                             <textarea id="endereco" name="endereco" rows="3"
                                       placeholder="Digite o endereço completo">{{ old('endereco', $funcionario->endereco ?? '') }}</textarea>
+                            @error('endereco') <small class="text-danger">{{ $message }}</small> @enderror
                         </div>
+                        
+                        <!-- Switch de funcionário ativo -->
                         <div class="form-group full-width centered">
-                            <div class="checkbox-group">
-                                <input type="checkbox" id="ativo" name="ativo" value="1" class="checkbox"
-                                       {{ old('ativo', $funcionario->ativo ?? 1) ? 'checked' : '' }}>
+                            <div class="form-switch">
+                                <input type="hidden" name="ativo" value="0">
+                                <label class="switch" for="ativo">
+                                    <input
+                                        type="checkbox"
+                                        id="ativo"
+                                        name="ativo"
+                                        value="1"
+                                        {{ old('ativo', ($funcionario->ativo ?? 1)) ? 'checked' : '' }}>
+                                    <span class="slider"></span>
+                                </label>
                                 <label for="ativo" style="margin-bottom: 0; font-weight: 600;">Funcionário ativo</label>
                             </div>
+                            @error('ativo') <small class="text-danger d-block">{{ $message }}</small> @enderror
                         </div>
                     </div>
 
                     <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary" {{ (!isset($cargos) || !count($cargos)) ? 'disabled' : '' }}>
                             <i class="fas fa-save btn-icon"></i>
                             {{ isset($funcionario) ? 'Atualizar Funcionário' : 'Salvar Funcionário' }}
                         </button>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
+use App\Models\Cargo;
 
 class FuncionarioController extends Controller
 {
@@ -28,38 +29,41 @@ class FuncionarioController extends Controller
             return redirect()->route('login');
         }
 
+        $cargos = Cargo::where('ativo', true)
+            ->orderBy('nome')
+            ->pluck('nome'); // retorna só os nomes
+
         return view('funcionarios.create', [
             'usuario'     => Session::get('usuario'),
-            'funcionario' => null
+            'funcionario' => null,
+            'cargos'      => $cargos
         ]);
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'nome'          => 'required|string|max:255',
-            'cpf'           => 'required|string|max:14|unique:funcionarios,cpf',
-            'email'         => 'required|email|unique:funcionarios,email',
-            'cargo'         => 'required|string|max:100',
-            'especialidade' => 'nullable|string|max:100',
-            'telefone'      => 'nullable|string|max:20',
-            'endereco'      => 'nullable|string|max:255',
-            'ativo'         => 'nullable|boolean'
+            'nome'     => 'required|string|max:255',
+            'cpf'      => 'required|string|max:14|unique:funcionarios,cpf',
+            'email'    => 'required|email|unique:funcionarios,email',
+            'cargo'    => 'required|exists:cargos,nome',
+            'telefone' => 'nullable|string|max:20',
+            'endereco' => 'nullable|string|max:255',
+            'ativo'    => 'nullable|boolean'
         ]);
 
         $cpf = preg_replace('/\D/', '', $request->cpf);
 
         DB::table('funcionarios')->insert([
-            'nome'          => $request->nome,
-            'cpf'           => $cpf,
-            'email'         => $request->email,
-            'cargo'         => $request->cargo,
-            'especialidade' => $request->especialidade,
-            'telefone'      => $request->telefone,
-            'endereco'      => $request->endereco,
-            'ativo'         => $request->has('ativo') ? 1 : 0,
-            'created_at'    => now(),
-            'updated_at'    => now(),
+            'nome'       => $request->nome,
+            'cpf'        => $cpf,
+            'email'      => $request->email,
+            'cargo'      => $request->cargo,
+            'telefone'   => $request->telefone,
+            'endereco'   => $request->endereco,
+            'ativo'      => $request->boolean('ativo') ? 1 : 0,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         return redirect()->route('funcionarios.index')
@@ -74,37 +78,40 @@ class FuncionarioController extends Controller
 
         $funcionario = DB::table('funcionarios')->where('id', $id)->first();
 
+        $cargos = Cargo::where('ativo', true)
+            ->orderBy('nome')
+            ->pluck('nome');
+
         return view('funcionarios.create', [
             'usuario'     => Session::get('usuario'),
-            'funcionario' => $funcionario
+            'funcionario' => $funcionario,
+            'cargos'      => $cargos
         ]);
     }
 
     public function update(Request $request, $id)
     {
         $request->validate([
-            'nome'          => 'required|string|max:255',
-            'cpf'           => 'required|string|max:14|unique:funcionarios,cpf,' . $id,
-            'email'         => 'required|email|unique:funcionarios,email,' . $id,
-            'cargo'         => 'required|string|max:100',
-            'especialidade' => 'nullable|string|max:100',
-            'telefone'      => 'nullable|string|max:20',
-            'endereco'      => 'nullable|string|max:255',
-            'ativo'         => 'nullable|boolean'
+            'nome'     => 'required|string|max:255',
+            'cpf'      => 'required|string|max:14|unique:funcionarios,cpf,' . $id,
+            'email'    => 'required|email|unique:funcionarios,email,' . $id,
+            'cargo'    => 'required|exists:cargos,nome',
+            'telefone' => 'nullable|string|max:20',
+            'endereco' => 'nullable|string|max:255',
+            'ativo'    => 'nullable|boolean'
         ]);
 
         $cpf = preg_replace('/\D/', '', $request->cpf);
 
         DB::table('funcionarios')->where('id', $id)->update([
-            'nome'          => $request->nome,
-            'cpf'           => $cpf,
-            'email'         => $request->email,
-            'cargo'         => $request->cargo,
-            'especialidade' => $request->especialidade,
-            'telefone'      => $request->telefone,
-            'endereco'      => $request->endereco,
-            'ativo'         => $request->has('ativo') ? 1 : 0,
-            'updated_at'    => now(),
+            'nome'       => $request->nome,
+            'cpf'        => $cpf,
+            'email'      => $request->email,
+            'cargo'      => $request->cargo,
+            'telefone'   => $request->telefone,
+            'endereco'   => $request->endereco,
+            'ativo'      => $request->boolean('ativo') ? 1 : 0,
+            'updated_at' => now(),
         ]);
 
         return redirect()->route('funcionarios.index')

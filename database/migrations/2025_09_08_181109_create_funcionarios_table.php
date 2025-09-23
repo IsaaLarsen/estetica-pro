@@ -13,7 +13,6 @@ return new class extends Migration {
             $table->string('cpf')->unique();
             $table->string('email')->unique();
             $table->string('cargo');
-            $table->string('especialidade')->nullable();
             $table->string('telefone')->nullable();
             $table->string('endereco')->nullable();
             $table->boolean('ativo')->default(true);

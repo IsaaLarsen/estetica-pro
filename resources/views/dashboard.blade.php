@@ -323,15 +323,22 @@
                 class="nav-item {{ request()->routeIs('servicos.*') ? 'active' : '' }}">
                 <i class="fas    fa-scissors"></i><span>Serviços</span>
             </a>
-            <a href="#" class="nav-item">
+            <a href="{{ route('agenda.index') }}" class="nav-item {{ request()->routeIs('agenda.*') ? 'active' : '' }}">
                 <i class="fas fa-calendar-alt"></i><span>Agenda</span>
             </a>
+
             <a href="#" class="nav-item">
                 <i class="fas fa-hand-holding-usd"></i><span>Comissões</span>
             </a>
-            <a href="#" class="nav-item">
+            <a href="{{ route('clientes.index') }}" class="nav-item">
                 <i class="fas fa-user"></i><span>Clientes</span>
             </a>
+            <a href="{{ route('cargos.index') }}" class="nav-item {{ request()->routeIs('cargos.*') ? 'active' : '' }}">
+                <i class="fas fa-briefcase"></i><span>Cargos</span>
+            </a>
+
+
+
         </nav>
 
         <!-- Botão logout no rodapé -->

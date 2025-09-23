@@ -28,7 +28,11 @@ class ServicoController extends Controller
             return redirect()->route('login');
         }
 
-        $funcionarios = DB::table('funcionarios')->orderBy('nome')->get();
+        // Apenas funcionários ativos
+        $funcionarios = DB::table('funcionarios')
+            ->where('ativo', 1)
+            ->orderBy('nome')
+            ->get();
 
         return view('servicos.create', [
             'usuario'      => Session::get('usuario'),
@@ -57,9 +61,9 @@ class ServicoController extends Controller
             'nome'             => $request->nome,
             'valor'            => $valor,
             'comissao_percent' => $comissao,
-            'duracao_minutos'  => (int)$request->duracao_minutos,
+            'duracao_minutos'  => (int) $request->duracao_minutos,
             'descricao'        => $request->descricao,
-            'ativo'            => $request->has('ativo') ? 1 : 0,
+            'ativo'            => $request->boolean('ativo') ? 1 : 0,
             'created_at'       => now(),
             'updated_at'       => now(),
         ]);
@@ -80,7 +84,12 @@ class ServicoController extends Controller
             return redirect()->route('servicos.index')->with('error', 'Serviço não encontrado.');
         }
 
-        $funcionarios = DB::table('funcionarios')->orderBy('nome')->get();
+        // Apenas funcionários ativos
+        $funcionarios = DB::table('funcionarios')
+            ->where('ativo', 1)
+            ->orderBy('nome')
+            ->get();
+
         $vinculados = DB::table('funcionario_servico')
             ->where('servico_id', $id)
             ->pluck('funcionario_id')
@@ -113,9 +122,9 @@ class ServicoController extends Controller
             'nome'             => $request->nome,
             'valor'            => $valor,
             'comissao_percent' => $comissao,
-            'duracao_minutos'  => (int)$request->duracao_minutos,
+            'duracao_minutos'  => (int) $request->duracao_minutos,
             'descricao'        => $request->descricao,
-            'ativo'            => $request->has('ativo') ? 1 : 0,
+            'ativo'            => $request->boolean('ativo') ? 1 : 0,
             'updated_at'       => now(),
         ]);
 
@@ -126,7 +135,7 @@ class ServicoController extends Controller
 
     public function destroy($id)
     {
-        DB::table('funcionario_servico')->where('servico_id', $id)->delete(); // (opcional – temos cascade)
+        DB::table('funcionario_servico')->where('servico_id', $id)->delete();
         DB::table('servicos')->where('id', $id)->delete();
 
         return redirect()->route('servicos.index')->with('success', 'Serviço excluído com sucesso!');
@@ -142,8 +151,8 @@ class ServicoController extends Controller
         $rows = [];
         foreach ($funcionariosIds as $fid) {
             $rows[] = [
-                'funcionario_id' => (int)$fid,
-                'servico_id'     => (int)$servicoId,
+                'funcionario_id' => (int) $fid,
+                'servico_id'     => (int) $servicoId,
                 'created_at'     => $now,
                 'updated_at'     => $now,
             ];
@@ -153,10 +162,10 @@ class ServicoController extends Controller
 
     private function toDecimal($value): string
     {
-        $v = trim((string)$value);
+        $v = trim((string) $value);
         // "1.234,56" -> "1234.56"
         $v = str_replace('.', '', $v);
         $v = str_replace(',', '.', $v);
-        return number_format((float)$v, 2, '.', '');
+        return number_format((float) $v, 2, '.', '');
     }
 }
