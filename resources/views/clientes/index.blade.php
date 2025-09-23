@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Funcionários - Estética PRO</title>
+    <title>Clientes - Estética PRO</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -433,7 +433,7 @@
             color: white;
         }
 
-        /* Paginação fake (mantida) */
+        /* Paginação */
         .pagination {
             display: flex;
             justify-content: center;
@@ -510,7 +510,7 @@
             <a href="{{ route('dashboard') }}" class="nav-item">
                 <i class="fas fa-chart-line"></i><span>Dashboard</span>
             </a>
-            <a href="{{ route('funcionarios.index') }}" class="nav-item active">
+            <a href="{{ route('funcionarios.index') }}" class="nav-item">
                 <i class="fas fa-users"></i><span>Funcionários</span>
             </a>
             <a href="{{ route('servicos.index') }}" class="nav-item">
@@ -522,13 +522,12 @@
             <a href="#" class="nav-item">
                 <i class="fas fa-hand-holding-usd"></i><span>Comissões</span>
             </a>
-            <a href="{{ route('clientes.index') }}" class="nav-item">
+            <a href="{{ route('clientes.index') }}" class="nav-item active">
                 <i class="fas fa-user"></i><span>Clientes</span>
             </a>
             <a href="{{ route('cargos.index') }}" class="nav-item {{ request()->routeIs('cargos.*') ? 'active' : '' }}">
                 <i class="fas fa-briefcase"></i><span>Cargos</span>
             </a>
-
         </nav>
 
         <div class="sidebar-footer">
@@ -575,15 +574,15 @@
 
         <div class="content">
             <div class="page-header">
-                <h1 class="page-title">Funcionários</h1>
+                <h1 class="page-title">Clientes</h1>
                 <div class="header-actions">
                     <div class="search-box">
                         <i class="fas fa-search search-icon"></i>
-                        <input type="text" class="search-input" placeholder="Buscar funcionário...">
+                        <input type="text" class="search-input" placeholder="Buscar cliente...">
                     </div>
-                    <a href="{{ route('funcionarios.create') }}" class="btn btn-primary" style="text-decoration: none;">
+                    <a href="{{ route('clientes.create') }}" class="btn btn-primary" style="text-decoration: none;">
                         <i class="fas fa-plus btn-icon"></i>
-                        Novo Funcionário
+                        Novo Cliente
                     </a>
                 </div>
             </div>
@@ -592,49 +591,54 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Funcionário</th>
+                            <th>Cliente</th>
                             <th>CPF</th>
-                            <th>Cargo</th>
-                            <!-- removido: Especialidade -->
+                            <th>Telefone</th>
+                            <th>Email</th>
+                            <th>Endereço</th>
                             <th>Status</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($funcionarios as $f)
+                        @forelse ($clientes as $c)
                             <tr>
                                 <td>
                                     <div class="employee-info">
                                         <div class="employee-avatar">
-                                            {{ strtoupper(mb_substr(explode(' ', $f->nome)[0] ?? '', 0, 1)) }}{{ strtoupper(mb_substr(explode(' ', $f->nome)[1] ?? '', 0, 1)) }}
+                                            {{ strtoupper(mb_substr(explode(' ', $c->nome)[0] ?? '', 0, 1)) }}{{ strtoupper(mb_substr(explode(' ', $c->nome)[1] ?? '', 0, 1)) }}
                                         </div>
                                         <div class="employee-details">
-                                            <h3>{{ $f->nome }}</h3>
-                                            <p>{{ $f->email ?? '—' }}</p>
+                                            <h3>{{ $c->nome }}</h3>
+                                            <p>{{ $c->email ?? '—' }}</p>
                                         </div>
                                     </div>
                                 </td>
-                                <td>{{ $f->cpf }}</td>
-                                <td>{{ $f->cargo ?? '—' }}</td>
-                                <!-- removido: <td>{{ $f->especialidade ?? '—' }}</td> -->
+                                <td>{{ $c->cpf ?? '—' }}</td>
+                                <td>{{ $c->telefone ?? '—' }}</td>
+                                <td>{{ $c->email ?? '—' }}</td>
+                                <td>{{ $c->endereco ?? '—' }}</td>
                                 <td>
-                                    @php $ativo = $f->ativo ?? 1; @endphp
+                                    @php $ativo = $c->ativo ?? 1; @endphp
                                     <span class="status-badge {{ $ativo ? 'status-active' : 'status-inactive' }}">
                                         {{ $ativo ? 'Ativo' : 'Inativo' }}
                                     </span>
                                 </td>
                                 <td>
                                     <div class="actions">
-                                        <a href="{{ route('funcionarios.edit', $f->id) }}"
-                                            class="action-btn-table action-edit" title="Editar">
+                                        <!-- Editar -->
+                                        <a href="{{ route('clientes.edit', $c->id) }}" class="action-btn-table action-edit"
+                                            title="Editar">
                                             <i class="fas fa-pen-to-square"></i>
                                         </a>
-                                        <form action="{{ route('funcionarios.destroy', $f->id) }}" method="POST"
+
+                                        <!-- Excluir -->
+                                        <form action="{{ route('clientes.destroy', $c->id) }}" method="POST"
                                             style="display:inline;">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="action-btn-table action-delete" title="Excluir"
-                                                onclick="return confirm('Tem certeza que deseja excluir este funcionário?')">
+                                                onclick="return confirm('Tem certeza que deseja excluir este cliente?')">
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>
                                         </form>
@@ -643,10 +647,10 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" style="text-align:center; padding: 32px; color: var(--text-light);">
-                                    <i class="fas fa-users"
+                                <td colspan="7" style="text-align:center; padding: 32px; color: var(--text-light);">
+                                    <i class="fas fa-user"
                                         style="font-size:28px; color:#e5e7eb; display:block; margin-bottom:10px;"></i>
-                                    Nenhum funcionário cadastrado.
+                                    Nenhum cliente cadastrado.
                                 </td>
                             </tr>
                         @endforelse
@@ -654,13 +658,19 @@
                 </table>
             </div>
 
-            <div class="pagination">
-                <div class="pagination-item"><i class="fas fa-chevron-left"></i></div>
-                <div class="pagination-item active">1</div>
-                <div class="pagination-item">2</div>
-                <div class="pagination-item">3</div>
-                <div class="pagination-item"><i class="fas fa-chevron-right"></i></div>
-            </div>
+            @if(method_exists($clientes, 'links'))
+                <div style="display:flex;justify-content:center;margin-top:16px;">
+                    {{ $clientes->onEachSide(1)->links() }}
+                </div>
+            @else
+                <div class="pagination">
+                    <div class="pagination-item"><i class="fas fa-chevron-left"></i></div>
+                    <div class="pagination-item active">1</div>
+                    <div class="pagination-item">2</div>
+                    <div class="pagination-item">3</div>
+                    <div class="pagination-item"><i class="fas fa-chevron-right"></i></div>
+                </div>
+            @endif
         </div>
     </div>
 

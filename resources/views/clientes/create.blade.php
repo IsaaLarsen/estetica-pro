@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $servico ? 'Editar Serviço' : 'Novo Serviço' }} - Estética PRO</title>
+    <title>{{ isset($cliente) ? 'Editar Cliente' : 'Novo Cliente' }} - Estética PRO</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -244,7 +244,7 @@
             border-radius: 16px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
             width: 100%;
-            max-width: 700px;
+            max-width: 800px;
         }
         
         .page-header {
@@ -404,81 +404,27 @@
             align-items: center; /* Alinha o texto verticalmente */
         }
         
-        .form-section {
-            border: 2px solid #f3f4f6;
-            border-radius: 12px;
-            padding: 20px;
-            margin-top: 20px;
-        }
-        
-        .section-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 16px;
-            color: var(--text);
-        }
-        
-        .search-container {
-            margin-bottom: 15px;
-            position: relative;
-        }
-        
-        .search-input {
-            padding-left: 40px;
-        }
-        
-        .search-icon {
-            position: absolute;
-            left: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-light);
-        }
-        
-        .chips-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-top: 12px;
-            max-height: 200px;
-            overflow-y: auto;
-            padding: 5px;
-        }
-        
-        .chip {
+        .error-message {
+            color: var(--danger);
+            font-size: 14px;
+            margin-top: 5px;
             display: flex;
             align-items: center;
-            padding: 8px 16px;
-            background: #f9fafb;
-            border: 2px solid #e5e7eb;
-            border-radius: 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
+            gap: 5px;
         }
         
-        .chip:hover {
-            border-color: var(--primary);
+        .error-container {
+            background: #fef2f2;
+            color: var(--danger);
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #fecaca;
         }
         
-        .chip input {
-            margin-right: 8px;
-        }
-        
-        .chip.selected {
-            background: var(--primary-light);
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-        
-        .chip-label {
-            cursor: pointer;
-        }
-        
-        .no-results {
-            text-align: center;
-            color: var(--text-light);
-            padding: 20px;
-            font-style: italic;
+        .error-container ul {
+            margin-left: 20px;
+            margin-top: 8px;
         }
         
         .form-actions {
@@ -526,27 +472,9 @@
             margin-right: 8px;
         }
         
-        .error-message {
-            color: var(--danger);
-            font-size: 14px;
-            margin-top: 5px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        .error-container {
-            background: #fef2f2;
-            color: var(--danger);
-            padding: 16px;
-            borderRadius: 12px;
-            margin-bottom: 20px;
-            border: 1px solid #fecaca;
-        }
-        
-        .error-container ul {
-            margin-left: 20px;
-            margin-top: 8px;
+        /* Máscaras para campos */
+        .input-mask {
+            position: relative;
         }
         
         /* Responsividade */
@@ -623,10 +551,10 @@
             <a href="#" class="nav-item">
                 <i class="fas fa-hand-holding-usd"></i><span>Comissões</span>
             </a>
-             <a href="{{ route('clientes.index') }}" class="nav-item">
+             <a href="{{ route('clientes.index') }}" class="nav-item {{ request()->routeIs('clientes.*') ? 'active' : '' }}">
                 <i class="fas fa-user"></i><span>Clientes</span>
             </a>
-            <a href="{{ route('cargos.index') }}" class="nav-item {{ request()->routeIs('cargos.*') ? 'active' : '' }}">
+                        <a href="{{ route('cargos.index') }}" class="nav-item {{ request()->routeIs('cargos.*') ? 'active' : '' }}">
                 <i class="fas fa-briefcase"></i><span>Cargos</span>
             </a>
         </nav>
@@ -649,7 +577,7 @@
             <div class="user-info">
                 <div class="user-avatar">EP</div>
                 <div class="user-details">
-                    <h3>{{ $usuario->nome }}</h3>
+                    <h3>{{ $usuario->nome ?? 'Usuário' }}</h3>
                     <p>Administrador</p>
                 </div>
             </div>
@@ -677,8 +605,8 @@
         <div class="content">
             <div class="form-container">
                 <div class="page-header">
-                    <h1 class="page-title">{{ $servico ? 'Editar Serviço' : 'Novo Serviço' }}</h1>
-                    <a href="{{ route('servicos.index') }}" class="back-link">
+                    <h1 class="page-title">{{ isset($cliente) ? 'Editar Cliente' : 'Novo Cliente' }}</h1>
+                    <a href="{{ route('clientes.index') }}" class="back-link">
                         <i class="fas fa-arrow-left"></i> Voltar à lista
                     </a>
                 </div>
@@ -694,37 +622,44 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ $servico ? route('servicos.update', $servico->id) : route('servicos.store') }}">
+                <form method="POST" action="{{ isset($cliente) ? route('clientes.update', $cliente->id) : route('clientes.store') }}">
                     @csrf
-                    @if($servico) @method('PUT') @endif
+                    @if(isset($cliente)) 
+                        @method('PUT') 
+                    @endif
 
                     <div class="form-grid">
                         <div class="form-group">
-                            <label for="nome">Nome do serviço</label>
-                            <input type="text" id="nome" name="nome" value="{{ old('nome', $servico->nome ?? '') }}" required placeholder="Ex: Corte de Cabelo">
+                            <label for="nome">Nome *</label>
+                            <input type="text" id="nome" name="nome" value="{{ old('nome', $cliente->nome ?? '') }}" required placeholder="Nome completo do cliente">
                         </div>
                         
                         <div class="form-group">
-                            <label for="valor">Valor (R$)</label>
-                            <input type="text" id="valor" name="valor" placeholder="Ex: 120,00" value="{{ old('valor', isset($servico) ? number_format($servico->valor,2,',','.') : '') }}" required>
+                            <label for="telefone">Telefone</label>
+                            <input type="text" id="telefone" name="telefone" value="{{ old('telefone', $cliente->telefone ?? '') }}" placeholder="(00) 00000-0000">
                         </div>
                         
                         <div class="form-group">
-                            <label for="comissao_percent">% da comissão</label>
-                            <input type="text" id="comissao_percent" name="comissao_percent" placeholder="Ex: 40,00" value="{{ old('comissao_percent', isset($servico) ? number_format($servico->comissao_percent,2,',','.') : '') }}" required>
+                            <label for="data_nascimento">Data de Nascimento</label>
+                            <input type="date" id="data_nascimento" name="data_nascimento" value="{{ old('data_nascimento', $cliente->data_nascimento ?? '') }}">
                         </div>
                         
                         <div class="form-group">
-                            <label for="duracao_minutos">Duração (minutos)</label>
-                            <input type="number" id="duracao_minutos" min="5" max="1440" name="duracao_minutos" value="{{ old('duracao_minutos', $servico->duracao_minutos ?? 30) }}" required>
+                            <label for="cpf">CPF</label>
+                            <input type="text" id="cpf" name="cpf" value="{{ old('cpf', $cliente->cpf ?? '') }}" placeholder="000.000.000-00">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email" value="{{ old('email', $cliente->email ?? '') }}" placeholder="cliente@email.com">
                         </div>
                         
                         <div class="form-group full-width">
-                            <label for="descricao">Descrição</label>
-                            <textarea id="descricao" name="descricao" placeholder="Detalhes do serviço...">{{ old('descricao', $servico->descricao ?? '') }}</textarea>
+                            <label for="endereco">Endereço</label>
+                            <input type="text" id="endereco" name="endereco" value="{{ old('endereco', $cliente->endereco ?? '') }}" placeholder="Endereço completo">
                         </div>
                         
-                        <!-- Switch de serviço ativo - CORRIGIDO O ALINHAMENTO -->
+                        <!-- Switch de cliente ativo - CORRIGIDO O ALINHAMENTO -->
                         <div class="form-group full-width centered">
                             <div class="form-switch">
                                 <!-- Garante envio de 0 quando desmarcado -->
@@ -735,52 +670,21 @@
                                         id="ativo"
                                         name="ativo"
                                         value="1"
-                                        {{ old('ativo', ($servico->ativo ?? 1)) ? 'checked' : '' }}>
+                                        {{ old('ativo', ($cliente->ativo ?? 1)) ? 'checked' : '' }}>
                                     <span class="slider"></span>
                                 </label>
-                                <label for="ativo" style="margin-bottom: 0; font-weight: 600;">Serviço ativo</label>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group full-width">
-                            <div class="form-section">
-                                <h3 class="section-title">Quem realiza este serviço?</h3>
-                                
-                                <div class="search-container">
-                                    <i class="fas fa-search search-icon"></i>
-                                    <input type="text" class="form-input search-input" id="searchFuncionarios" placeholder="Pesquisar funcionários...">
-                                </div>
-                                
-                                <div class="chips-container" id="chipsContainer">
-                                    @foreach($funcionarios as $f)
-                                        <div class="chip funcionario-chip {{ in_array($f->id, old('funcionarios', $vinculados)) ? 'selected' : '' }}" data-nome="{{ strtolower($f->nome) }}">
-                                            <input
-                                                type="checkbox"
-                                                name="funcionarios[]"
-                                                value="{{ $f->id }}"
-                                                id="funcionario-{{ $f->id }}"
-                                                {{ in_array($f->id, old('funcionarios', $vinculados)) ? 'checked' : '' }}
-                                            >
-                                            <label for="funcionario-{{ $f->id }}" class="chip-label">
-                                                {{ $f->nome }}
-                                            </label>
-                                        </div>
-                                    @endforeach
-                                </div>
-                                <div id="noResults" class="no-results" style="display: none;">
-                                    Nenhum funcionário encontrado.
-                                </div>
+                                <label for="ativo" style="margin-bottom: 0; font-weight: 600;">Cliente ativo</label>
                             </div>
                         </div>
                     </div>
 
                     <div class="form-actions">
-                        <a href="{{ route('servicos.index') }}" class="btn btn-secondary">
+                        <a href="{{ route('clientes.index') }}" class="btn btn-secondary">
                             <i class="fas fa-times btn-icon"></i> Cancelar
                         </a>
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-save btn-icon"></i> 
-                            {{ $servico ? 'Atualizar Serviço' : 'Salvar Serviço' }}
+                            {{ isset($cliente) ? 'Atualizar Cliente' : 'Salvar Cliente' }}
                         </button>
                     </div>
                 </form>
@@ -789,50 +693,6 @@
     </div>
 
     <script>
-        // Interatividade dos chips
-        document.querySelectorAll('.chip').forEach(chip => {
-            chip.addEventListener('click', function(e) {
-                // Evita que o clique no checkbox dispare o evento duas vezes
-                if (e.target.type !== 'checkbox') {
-                    const checkbox = this.querySelector('input[type="checkbox"]');
-                    checkbox.checked = !checkbox.checked;
-                    this.classList.toggle('selected', checkbox.checked);
-                    checkbox.dispatchEvent(new Event('change'));
-                }
-            });
-        });
-        
-        // Atualiza a aparência dos chips quando o checkbox is alterado
-        document.querySelectorAll('.chip input[type="checkbox"]').forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                const chip = this.closest('.chip');
-                chip.classList.toggle('selected', this.checked);
-            });
-        });
-        
-        // Formatação de valores monetários
-        const inputValor = document.querySelector('input[name="valor"]');
-        if (inputValor) {
-            inputValor.addEventListener('input', function(e) {
-                let value = e.target.value.replace(/\D/g, '');
-                value = (value / 100).toFixed(2) + '';
-                value = value.replace(".", ",");
-                value = value.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
-                e.target.value = value;
-            });
-        }
-        
-        // Formatação de porcentagem
-        const inputComissao = document.querySelector('input[name="comissao_percent"]');
-        if (inputComissao) {
-            inputComissao.addEventListener('input', function(e) {
-                let value = e.target.value.replace(/\D/g, '');
-                value = (value / 100).toFixed(2) + '';
-                value = value.replace(".", ",");
-                e.target.value = value;
-            });
-        }
-        
         // Configurações do menu dropdown
         const settingsBtn = document.getElementById('settingsBtn');
         const settingsMenu = document.getElementById('settingsMenu');
@@ -846,34 +706,40 @@
             }
         });
         
-        // Pesquisa de funcionários
-        const searchInput = document.getElementById('searchFuncionarios');
-        const chipsContainer = document.getElementById('chipsContainer');
-        const chips = document.querySelectorAll('.funcionario-chip');
-        const noResults = document.getElementById('noResults');
-        
-        searchInput.addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase();
-            let hasResults = false;
-            
-            chips.forEach(chip => {
-                const nome = chip.getAttribute('data-nome');
-                if (nome.includes(searchTerm)) {
-                    chip.style.display = 'flex';
-                    hasResults = true;
-                } else {
-                    chip.style.display = 'none';
+        // Máscaras para os campos
+        // Máscara para telefone
+        const telefoneInput = document.getElementById('telefone');
+        if (telefoneInput) {
+            telefoneInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                
+                if (value.length <= 11) {
+                    // Formato: (00) 00000-0000
+                    value = value.replace(/(\d{2})(\d)/, '($1) $2');
+                    value = value.replace(/(\d{5})(\d)/, '$1-$2');
+                    value = value.replace(/(-\d{4})\d+?$/, '$1');
                 }
+                
+                e.target.value = value;
             });
-            
-            if (hasResults) {
-                noResults.style.display = 'none';
-                chipsContainer.style.display = 'flex';
-            } else {
-                noResults.style.display = 'block';
-                chipsContainer.style.display = 'none';
-            }
-        });
+        }
+        
+        // Máscara para CPF
+        const cpfInput = document.getElementById('cpf');
+        if (cpfInput) {
+            cpfInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                
+                if (value.length <= 11) {
+                    // Formato: 000.000.000-00
+                    value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                    value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                    value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                }
+                
+                e.target.value = value;
+            });
+        }
     </script>
 </body>
 </html>

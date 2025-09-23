@@ -533,28 +533,31 @@
                 class="nav-item {{ request()->routeIs('servicos.*') ? 'active' : '' }}">
                 <i class="fas fa-scissors"></i><span>Serviços</span>
             </a>
-            <a href="#" class="nav-item">
+            <a href="{{ route('agenda.index') }}" class="nav-item {{ request()->routeIs('agenda.*') ? 'active' : '' }}">
                 <i class="fas fa-calendar-alt"></i><span>Agenda</span>
             </a>
             <a href="#" class="nav-item">
                 <i class="fas fa-hand-holding-usd"></i><span>Comissões</span>
             </a>
-            <a href="#" class="nav-item">
+            <a href="{{ route('clientes.index') }}" class="nav-item">
                 <i class="fas fa-user"></i><span>Clientes</span>
+            </a>
+            <a href="{{ route('cargos.index') }}" class="nav-item {{ request()->routeIs('cargos.*') ? 'active' : '' }}">
+                <i class="fas fa-briefcase"></i><span>Cargos</span>
             </a>
         </nav>
 
         <div class="menu-divider"></div>
-                    <form method="GET" action="{{ route('logout') }}" style="width:100%;">
-                        <button type="submit" class="menu-item">
-                            <i class="fas fa-sign-out-alt"></i>
-                            <span>Sair</span>
-                        </button>
-                    </form>
+        <form method="GET" action="{{ route('logout') }}" style="width:100%;">
+            <button type="submit" class="menu-item">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Sair</span>
+            </button>
+        </form>
     </aside>
 
     <!-- Conteúdo principal -->
-     <div class="main-content">
+    <div class="main-content">
         <!-- Topbar -->
         <div class="topbar">
             <div class="user-info">
