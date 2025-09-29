@@ -9,6 +9,7 @@ use App\Http\Controllers\CargoController;
 use App\Http\Controllers\AgendaController;
 use App\Http\Controllers\AgendaBloqueioController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\ComissaoController;
 
 Route::get('/', fn() => redirect()->route('login'));
 
@@ -80,3 +81,8 @@ Route::delete('/agenda/bloqueios/{bloqueio}', [AgendaBloqueioController::class,'
 // ===========================
 Route::get('/settings/agenda',  [SettingController::class,'edit'])->name('settings.edit');
 Route::post('/settings/agenda', [SettingController::class,'update'])->name('settings.update');
+
+
+Route::get('/comissoes', [ComissaoController::class, 'index'])->name('comissoes.index');
+Route::post('/comissoes/{id}/pagar', [ComissaoController::class, 'marcarPago'])->name('comissoes.pagar');
+Route::post('/comissoes/{id}/estornar', [ComissaoController::class, 'estornar'])->name('comissoes.estornar');

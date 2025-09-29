@@ -8,6 +8,7 @@ use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Services\ComissaoService;
 
 class AgendaController extends Controller
 {
@@ -335,6 +336,8 @@ class AgendaController extends Controller
             return back()->withErrors(['hora' => 'Período bloqueado para este funcionário.'])->withInput();
         }
 
+        $antigoStatus = $agenda->status;
+
         $agenda->update([
             'funcionario_id' => $request->funcionario_id,
             'cliente_id'     => $request->cliente_id,
@@ -344,6 +347,18 @@ class AgendaController extends Controller
             'status'         => $request->status,
             'observacoes'    => $request->observacoes,
         ]);
+
+        // === HOOKS DE COMISSÃO ===
+        // se mudou para concluído (e não era concluído), gera comissão
+        if ($request->status === 'concluido' && $antigoStatus !== 'concluido') {
+            ComissaoService::gerarParaAgenda($agenda);
+        }
+
+        // se estava concluído e mudou para cancelado, estorna
+        if ($request->status === 'cancelado' && $antigoStatus === 'concluido') {
+            ComissaoService::estornarPorAgendaId($agenda->id);
+        }
+
 
         return redirect()->route('agenda.index', ['funcionario_id' => $request->funcionario_id])
             ->with('success','Agendamento atualizado com sucesso!');
@@ -359,7 +374,25 @@ class AgendaController extends Controller
         ]);
 
         $agenda = Agenda::findOrFail($id);
+
+        // guarda o status antigo ANTES de atualizar
+        $antigoStatus = $agenda->status;
+
+        // aplica novo status
         $agenda->update(['status' => $request->status]);
+
+        // === HOOKS DE COMISSÃO ===
+        // se mudou para concluído (e não era concluído), gera comissão
+        if ($request->status === 'concluido' && $antigoStatus !== 'concluido') {
+            ComissaoService::gerarParaAgenda($agenda);
+        }
+
+        // se estava concluído e mudou para cancelado, estorna
+        if ($request->status === 'cancelado' && $antigoStatus === 'concluido') {
+            ComissaoService::estornarPorAgendaId($agenda->id);
+        }
+        // Gera ou estorna comissão conforme o novo status
+
 
         if ($request->wantsJson()) {
             return response()->json(['ok'=>true, 'status'=>$agenda->status]);
