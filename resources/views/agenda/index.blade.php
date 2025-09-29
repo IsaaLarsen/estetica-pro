@@ -76,12 +76,12 @@
         .filter-select:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.2); }
 
         /* Calendar Container */
-        .calendar-container { 
-            background: white; 
-            border-radius: 16px; 
-            overflow: hidden; 
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); 
-            margin-bottom: 30px; 
+        .calendar-container {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            margin-bottom: 30px;
             padding: 20px;
             height: 90vh;
         }
@@ -271,7 +271,10 @@
             <a href="{{ route('agenda.index') }}" class="nav-item {{ request()->routeIs('agenda.*') ? 'active' : '' }}">
                 <i class="fas fa-calendar-alt"></i><span>Agenda</span>
             </a>
-            <a href="#" class="nav-item"><i class="fas fa-hand-holding-usd"></i><span>Comissões</span></a>
+            <a href="{{ route('comissoes.index') }}"
+                class="nav-item {{ request()->routeIs('comissoes.*') ? 'active' : '' }}">
+                    <i class="fas fa-hand-holding-usd"></i><span>Comissões</span>
+            </a>
             <a href="{{ route('clientes.index') }}" class="nav-item {{ request()->routeIs('clientes.*') ? 'active' : '' }}">
                 <i class="fas fa-user"></i><span>Clientes</span>
             </a>
@@ -340,7 +343,7 @@
                             @endforeach
                         </select>
                     </div>
-                    
+
                     <div class="action-buttons" style="display: flex; gap: 12px;">
                         <a href="{{ route('agenda.create') }}" class="btn btn-primary">
                             <i class="fas fa-plus btn-icon"></i>Novo agendamento

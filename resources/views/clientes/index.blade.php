@@ -519,8 +519,9 @@
             <a href="{{ route('agenda.index') }}" class="nav-item {{ request()->routeIs('agenda.*') ? 'active' : '' }}">
                 <i class="fas fa-calendar-alt"></i><span>Agenda</span>
             </a>
-            <a href="#" class="nav-item">
-                <i class="fas fa-hand-holding-usd"></i><span>Comissões</span>
+            <a href="{{ route('comissoes.index') }}"
+                class="nav-item {{ request()->routeIs('comissoes.*') ? 'active' : '' }}">
+                    <i class="fas fa-hand-holding-usd"></i><span>Comissões</span>
             </a>
             <a href="{{ route('clientes.index') }}" class="nav-item active">
                 <i class="fas fa-user"></i><span>Clientes</span>
