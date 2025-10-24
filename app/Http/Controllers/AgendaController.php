@@ -400,4 +400,74 @@ class AgendaController extends Controller
 
         return back()->with('success','Status atualizado com sucesso!');
     }
+
+      public function slots(Request $request)
+    {
+        $request->validate([
+            'funcionario_id' => 'required|integer|exists:funcionarios,id',
+            'data'           => 'required|date_format:Y-m-d',
+            'duracao'        => 'required|integer|min:10|max:480',
+        ]);
+
+        $funcionarioId = (int) $request->funcionario_id;
+        $data          = Carbon::createFromFormat('Y-m-d', $request->data);
+        $duracaoMin    = (int) $request->duracao;
+
+        // Janela de expediente (usa seu Setting)
+        $iniExp = Setting::get('expediente_inicio', '08:00');
+        $fimExp = Setting::get('expediente_fim',    '18:00');
+
+        $tz = config('app.timezone', 'America/Sao_Paulo');
+        $inicioDia = Carbon::parse($data->toDateString().' '.$iniExp, $tz);
+        $fimDia    = Carbon::parse($data->toDateString().' '.$fimExp, $tz);
+
+        // Carrega compromissos e bloqueios do dia (usando seus Models)
+        $agendas = Agenda::where('funcionario_id', $funcionarioId)
+            ->whereDate('inicio', $data)
+            ->get(['inicio','fim']);
+
+        $bloqueios = AgendaBloqueio::where('funcionario_id', $funcionarioId)
+            ->whereDate('inicio', $data)
+            ->get(['inicio','fim']);
+
+        // Normaliza intervalos ocupados
+        $ocupados = [];
+        foreach ($agendas as $a) {
+            $ocupados[] = [
+                'ini' => $a->inicio instanceof Carbon ? $a->inicio->copy() : Carbon::parse($a->inicio, $tz),
+                'fim' => $a->fim    instanceof Carbon ? $a->fim->copy()    : Carbon::parse($a->fim, $tz),
+            ];
+        }
+        foreach ($bloqueios as $b) {
+            $ocupados[] = [
+                'ini' => $b->inicio instanceof Carbon ? $b->inicio->copy() : Carbon::parse($b->inicio, $tz),
+                'fim' => $b->fim    instanceof Carbon ? $b->fim->copy()    : Carbon::parse($b->fim, $tz),
+            ];
+        }
+
+        // Gera slots livres com passo de 15 min (ajuste se quiser 30)
+        $slots = [];
+        $cursor = $inicioDia->copy();
+
+        while ($cursor->copy()->addMinutes($duracaoMin)->lte($fimDia)) {
+            $slotIni = $cursor->copy();
+            $slotFim = $cursor->copy()->addMinutes($duracaoMin);
+
+            $conflita = false;
+            foreach ($ocupados as $o) {
+                if ($slotIni < $o['fim'] && $slotFim > $o['ini']) {
+                    $conflita = true;
+                    break;
+                }
+            }
+
+            if (!$conflita) {
+                $slots[] = $slotIni->format('H:i');
+            }
+
+            $cursor->addMinutes(15);
+        }
+
+        return response()->json(['data' => $slots]);
+    }
 }
