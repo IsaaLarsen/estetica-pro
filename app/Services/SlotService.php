@@ -11,25 +11,30 @@ class SlotService
      * Gera slots livres ("HH:MM") dentro de [inicioDia, fimDia],
      * removendo interseções com agendamentos e bloqueios.
      *
-     * @param Carbon $inicioDia
-     * @param Carbon $fimDia
-     * @param int $duracao minutos
-     * @param Collection $ocupados itens com 'inicio','fim'
-     * @param Collection $bloqueios itens com 'inicio','fim'
+     * @param Carbon                   $inicioDia
+     * @param Carbon                   $fimDia
+     * @param int                      $duracao   minutos do serviço
+     * @param Collection|array         $ocupados  itens com 'inicio','fim'
+     * @param Collection|array         $bloqueios itens com 'inicio','fim'
+     * @param int                      $passo     minutos entre sugestões (default: 15)
      * @return array<string>
      */
     public static function gerar(
         Carbon $inicioDia,
         Carbon $fimDia,
         int $duracao,
-        Collection $ocupados,
-        Collection $bloqueios
+        Collection|array $ocupados = [],
+        Collection|array $bloqueios = [],
+        int $passo = 15
     ): array {
         $tz = $inicioDia->getTimezone();
         $slots = [];
-        $cursor = $inicioDia->copy();
 
-        // Normaliza ranges
+        // Normaliza para array simples
+        if ($ocupados instanceof Collection) $ocupados = $ocupados->all();
+        if ($bloqueios instanceof Collection) $bloqueios = $bloqueios->all();
+
+        // Monta lista de intervalos ocupados
         $ranges = [];
         foreach ($ocupados as $a) {
             $ranges[] = [
@@ -44,7 +49,10 @@ class SlotService
             ];
         }
 
-        while ($cursor->lte($fimDia->copy()->subMinutes($duracao))) {
+        // Avança em PASSO fixo (15 min por padrão),
+        // mas só considera slot válido quando [ini,ini+duracao] cabe inteiro no expediente
+        $cursor = $inicioDia->copy();
+        while ($cursor->copy()->addMinutes($duracao)->lte($fimDia)) {
             $ini = $cursor->copy();
             $fim = $cursor->copy()->addMinutes($duracao);
 
@@ -59,7 +67,7 @@ class SlotService
                 $slots[] = $ini->format('H:i');
             }
 
-            $cursor->addMinutes($duracao);
+            $cursor->addMinutes($passo);
         }
 
         return $slots;
@@ -67,6 +75,7 @@ class SlotService
 
     private static function intersecta(Carbon $aIni, Carbon $aFim, Carbon $bIni, Carbon $bFim): bool
     {
+        // Interseção aberta: existe choque se início < fimDoOutro e fim > inícioDoOutro
         return $aIni->lt($bFim) && $aFim->gt($bIni);
     }
 }

@@ -54,50 +54,70 @@ class AgendaApiController extends Controller
      * Retorna slots livres (HH:MM) considerando expediente, agendados e bloqueios.
      */
     public function slots(Request $r)
-    {
-        $r->validate([
-            'funcionario_id' => 'required|integer|exists:funcionarios,id',
-            'servico_id'     => 'required|integer|exists:servicos,id',
-            'data'           => 'required|date_format:Y-m-d',
-        ]);
+{
+    // Validação flexível: exige funcionario_id + data
+    // e pelo menos UM entre servico_id OU (duracao/duracao_minutos)
+    $r->validate([
+        'funcionario_id'  => 'required|integer|exists:funcionarios,id',
+        'data'            => 'required|date_format:Y-m-d',
+        'servico_id'      => 'nullable|integer|exists:servicos,id',
+        'duracao'         => 'nullable|integer|min:10|max:480',
+        'duracao_minutos' => 'nullable|integer|min:10|max:480',
+    ]);
 
-        $tz = config('app.timezone','America/Sao_Paulo');
-
-        $servico = Servico::findOrFail($r->servico_id);
-        $dur     = max(1, (int)($servico->duracao_minutos ?? 30));
-
-        $min = Setting::get('expediente_inicio', '08:00');
-        $max = Setting::get('expediente_fim',    '18:00');
-
-        $dia     = Carbon::parse($r->data, $tz);
-        $inicioD = Carbon::parse($dia->format('Y-m-d').' '.$min, $tz);
-        $fimD    = Carbon::parse($dia->format('Y-m-d').' '.$max, $tz);
-
-        $bloqueios = AgendaBloqueio::where('funcionario_id', $r->funcionario_id)
-            ->where(function($q) use ($inicioD,$fimD){
-                $q->whereBetween('inicio', [$inicioD, $fimD])
-                  ->orWhereBetween('fim',   [$inicioD, $fimD])
-                  ->orWhere(function($q2) use ($inicioD,$fimD){
-                      $q2->where('inicio','<=',$inicioD)->where('fim','>=',$fimD);
-                  });
-            })->get(['inicio','fim']);
-
-        $agendados = Agenda::where('funcionario_id', $r->funcionario_id)
-            ->whereDate('inicio', $dia->format('Y-m-d'))
-            ->whereIn('status', ['agendado','confirmado'])
-            ->get(['inicio','fim']);
-
-        $slots = SlotService::gerar(
-            inicioDia: $inicioD,
-            fimDia:    $fimD,
-            duracao:   $dur,
-            ocupados:  $agendados,
-            bloqueios: $bloqueios
-        );
-
-        return response()->json(['data'=>$r->data, 'slots'=>$slots]);
+    if (!$r->filled('servico_id') && !$r->filled('duracao') && !$r->filled('duracao_minutos')) {
+        return response()->json([
+            'errors' => ['duracao' => ['Informe servico_id ou a duração (duracao/duracao_minutos).']]
+        ], 422);
     }
 
+    $tz = config('app.timezone','America/Sao_Paulo');
+
+    // Resolve duração: prioriza servico_id; senão usa duracao/duracao_minutos; default 30
+    if ($r->filled('servico_id')) {
+        $servico = Servico::findOrFail($r->servico_id);
+        $dur = max(1, (int)($servico->duracao_minutos ?? 30));
+    } else {
+        $dur = (int)($r->input('duracao') ?? $r->input('duracao_minutos') ?? 30);
+        $dur = max(10, min(480, $dur));
+    }
+
+    // Janela de expediente
+    $min = Setting::get('expediente_inicio', '08:00');
+    $max = Setting::get('expediente_fim',    '18:00');
+
+    $dia     = Carbon::parse($r->data, $tz);
+    $inicioD = Carbon::parse($dia->format('Y-m-d').' '.$min, $tz);
+    $fimD    = Carbon::parse($dia->format('Y-m-d').' '.$max, $tz);
+
+    // Bloqueios do dia
+    $bloqueios = AgendaBloqueio::where('funcionario_id', $r->funcionario_id)
+        ->where(function($q) use ($inicioD,$fimD){
+            $q->whereBetween('inicio', [$inicioD, $fimD])
+              ->orWhereBetween('fim',   [$inicioD, $fimD])
+              ->orWhere(function($q2) use ($inicioD,$fimD){
+                  $q2->where('inicio','<=',$inicioD)->where('fim','>=',$fimD);
+              });
+        })->get(['inicio','fim']);
+
+    // Agendados do dia
+    $agendados = Agenda::where('funcionario_id', $r->funcionario_id)
+        ->whereDate('inicio', $dia->format('Y-m-d'))
+        ->whereIn('status', ['agendado','confirmado'])
+        ->get(['inicio','fim']);
+
+    // Geração dos slots (reaproveitando seu service)
+    $slots = SlotService::gerar(
+        inicioDia: $inicioD,
+        fimDia:    $fimD,
+        duracao:   $dur,
+        ocupados:  $agendados,
+        bloqueios: $bloqueios
+    );
+
+    // ⚠️ Padrão esperado pelo app: { "data": [ "09:00", ... ] }
+    return response()->json(['data' => $slots]);
+}
     /**
      * POST /api/agendamentos
      * Cria agendamento (TEMP: cliente_id vem no body para facilitar teste no Flutter).

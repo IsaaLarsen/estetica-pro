@@ -6,9 +6,13 @@ use Illuminate\Http\Request;
 // Models (bypass nos controllers com auth)
 use App\Models\Servico;
 use App\Models\Funcionario;
+use App\Models\Cliente;
+use App\Models\Agenda;
+
 
 // Controller ESPECÍFICO de API que você já tem nessa pasta (pelo seu print)
 use App\Http\Controllers\Api\AgendaApiController;
+use App\Http\Controllers\Api\AuthClienteController;
 
 // Ping
 Route::get('/ping', fn () => response()->json(['ok' => true]));
@@ -60,9 +64,29 @@ Route::get('/agenda/slots', [AgendaApiController::class, 'slots'])->withoutMiddl
     'auth', 'auth:sanctum', 'verified',
 ]);
 
-Route::post('/agendamentos', [AgendaApiController::class, 'store'])->withoutMiddleware([
+Route::post('/agendamentos', [AgendaApiController::class, 'agendar'])->withoutMiddleware([
     \App\Http\Middleware\Autenticacao::class,
     \Illuminate\Auth\Middleware\Authenticate::class,
     \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class, // POST via API sem CSRF
     'auth', 'auth:sanctum', 'verified',
 ]);
+
+// login público
+Route::post('/auth/cliente/login', [AuthClienteController::class, 'login'])
+    ->withoutMiddleware([\App\Http\Middleware\Autenticacao::class,'auth','auth:sanctum']);
+     Route::post('/auth/cliente/register', [AuthClienteController::class, 'register'])
+    ->withoutMiddleware([\App\Http\Middleware\Autenticacao::class,'auth','auth:sanctum']);
+    Route::post('/auth/cliente/forgot-password', [AuthClienteController::class, 'forgotPassword'])
+    ->withoutMiddleware([\App\Http\Middleware\Autenticacao::class,'auth','auth:sanctum']);
+
+// exemplo de rota autenticada do cliente
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/auth/cliente/me',    [AuthClienteController::class, 'me']);
+    Route::post('/auth/cliente/logout',[AuthClienteController::class, 'logout']);
+   // Route::post('/auth/cliente/register', [AuthClienteController::class, 'register']);
+
+    // se quiser mover estes para autenticado:
+    // Route::post('/agendamentos', [AgendaApiController::class, 'agendar']);
+    // Route::get('/agendamentos',  [AgendaApiController::class, 'meusAgendamentos']);
+    // Route::delete('/agendamentos/{id}', [AgendaApiController::class, 'cancelar']);
+});

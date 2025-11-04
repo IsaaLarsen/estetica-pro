@@ -37,35 +37,41 @@ class ClienteController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'nome'            => 'required|string|max:255',
-            'cpf'             => 'required|string|max:18|unique:clientes,cpf',
-            'telefone'        => 'nullable|string|max:30',
-            'email'           => 'nullable|email|max:255|unique:clientes,email',
-            'endereco'        => 'nullable|string|max:255',
-            'data_nascimento' => 'nullable|date',
-            'ativo'           => 'nullable|boolean',
-        ]);
+    $request->validate([
+        'nome'            => 'required|string|max:255',
+        'cpf'             => 'required|string|max:18|unique:clientes,cpf',
+        'telefone'        => 'nullable|string|max:30',
+        'email'           => 'nullable|email|max:255|unique:clientes,email',
+        'endereco'        => 'nullable|string|max:255',
+        'data_nascimento' => 'nullable|date',
+        'ativo'           => 'nullable|boolean',
+        // novo: senha opcional no cadastro via painel
+        'senha'           => 'nullable|string|min:6',
+    ]);
 
-        $cpf      = preg_replace('/\D+/', '', (string) $request->cpf);
-        $telefone = $request->telefone ? preg_replace('/\D+/', '', (string) $request->telefone) : null;
+    $cpf      = preg_replace('/\D+/', '', (string) $request->cpf);
+    $telefone = $request->telefone ? preg_replace('/\D+/', '', (string) $request->telefone) : null;
 
-        DB::table('clientes')->insert([
-            'nome'            => $request->nome,
-            'cpf'             => $cpf,
-            'telefone'        => $telefone,
-            'email'           => $request->email,
-            'endereco'        => $request->endereco,
-            'data_nascimento' => $request->data_nascimento,
-            // importante: usa boolean('ativo') + hidden input na view
-            'ativo'           => $request->boolean('ativo') ? 1 : 0,
-            'created_at'      => now(),
-            'updated_at'      => now(),
-        ]);
+    // se o campo senha vier vazio, usa padrão do .env (ou 123456)
+    $senhaPura = $request->filled('senha')
+        ? $request->senha
+        : config('auth.defaults_cliente_password', '123456');
 
-        return redirect()->route('clientes.index')->with('success', 'Cliente cadastrado com sucesso!');
+    DB::table('clientes')->insert([
+        'nome'            => $request->nome,
+        'cpf'             => $cpf,
+        'telefone'        => $telefone,
+        'email'           => $request->email,
+        'endereco'        => $request->endereco,
+        'data_nascimento' => $request->data_nascimento,
+        'ativo'           => $request->boolean('ativo') ? 1 : 0,
+        'senha'           => bcrypt($senhaPura), // <<< importante: hash aqui, pois estamos no Query Builder
+        'created_at'      => now(),
+        'updated_at'      => now(),
+    ]);
+
+    return redirect()->route('clientes.index')->with('success', 'Cliente cadastrado com sucesso!');
     }
-
     public function edit($id)
     {
         if (!Session::has('usuario')) {
@@ -94,30 +100,58 @@ class ClienteController extends Controller
             'endereco'        => 'nullable|string|max:255',
             'data_nascimento' => 'nullable|date',
             'ativo'           => 'nullable|boolean',
+            // novo: troca de senha opcional
+            'senha'           => 'nullable|string|min:6',
         ]);
 
         $cpf      = preg_replace('/\D+/', '', (string) $request->cpf);
         $telefone = $request->telefone ? preg_replace('/\D+/', '', (string) $request->telefone) : null;
 
-        DB::table('clientes')->where('id', $id)->update([
+        $payload = [
             'nome'            => $request->nome,
             'cpf'             => $cpf,
             'telefone'        => $telefone,
             'email'           => $request->email,
             'endereco'        => $request->endereco,
             'data_nascimento' => $request->data_nascimento,
-            // idem aqui
             'ativo'           => $request->boolean('ativo') ? 1 : 0,
             'updated_at'      => now(),
-        ]);
+        ];
+
+        // se o usuário preencher a senha no formulário de edição, atualiza (hash)
+        if ($request->filled('senha')) {
+            $payload['senha'] = bcrypt($request->senha);
+        }
+
+        DB::table('clientes')->where('id', $id)->update($payload);
 
         return redirect()->route('clientes.index')->with('success', 'Cliente atualizado com sucesso!');
     }
-
     public function destroy($id)
     {
         DB::table('clientes')->where('id', $id)->delete();
 
         return redirect()->route('clientes.index')->with('success', 'Cliente excluído com sucesso!');
     }
+
+    public function register(Request $r)
+{
+    $r->validate([
+        'nome' => 'required|string|max:100',
+        'email' => 'required|email|unique:clientes,email',
+        'telefone' => 'nullable|string|max:20',
+        'senha' => 'required|string|min:6',
+    ]);
+
+    $cliente = \App\Models\Cliente::create([
+        'nome' => $r->nome,
+        'email' => $r->email,
+        'telefone' => $r->telefone,
+        'senha' => bcrypt($r->senha),
+        'ativo' => 1,
+    ]);
+
+    return response()->json($cliente, 201);
+}
+
 }

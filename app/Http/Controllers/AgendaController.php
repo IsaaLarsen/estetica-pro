@@ -403,15 +403,17 @@ class AgendaController extends Controller
 
       public function slots(Request $request)
     {
-        $request->validate([
-            'funcionario_id' => 'required|integer|exists:funcionarios,id',
-            'data'           => 'required|date_format:Y-m-d',
-            'duracao'        => 'required|integer|min:10|max:480',
-        ]);
+         $request->validate([
+        'funcionario_id' => 'required|integer|exists:funcionarios,id',
+        'data'           => 'required|date_format:Y-m-d',
+        'duracao'        => 'nullable|integer|min:10|max:480',
+        'duracao_minutos'=> 'nullable|integer|min:10|max:480',
+    ]);
 
+        $duracaoMin = $request->input('duracao') ?? $request->input('duracao_minutos') ?? 30;
         $funcionarioId = (int) $request->funcionario_id;
         $data          = Carbon::createFromFormat('Y-m-d', $request->data);
-        $duracaoMin    = (int) $request->duracao;
+
 
         // Janela de expediente (usa seu Setting)
         $iniExp = Setting::get('expediente_inicio', '08:00');
@@ -470,4 +472,6 @@ class AgendaController extends Controller
 
         return response()->json(['data' => $slots]);
     }
+
+
 }
