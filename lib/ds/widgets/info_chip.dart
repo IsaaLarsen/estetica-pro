@@ -4,17 +4,26 @@ import '../colors.dart';
 class InfoChip extends StatelessWidget {
   final String label;
   final Color? bg;
-  const InfoChip(this.label, {super.key, this.bg});
+  final Color? textColor;
+
+  const InfoChip(this.label, {super.key, this.bg, this.textColor});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: bg ?? DSColors.purpleTint,
-        borderRadius: BorderRadius.circular(12),
+        color: bg ?? DSColors.primaryLight, // 🌸 antes era purpleTint
+        borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: textColor ?? DSColors.primaryDark,
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+        ),
+      ),
     );
   }
 }

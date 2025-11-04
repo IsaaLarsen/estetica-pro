@@ -61,7 +61,7 @@ class ListIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 48, height: 48,
-      decoration: BoxDecoration(color: DSColors.roseSoft, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: DSColors.primaryLight, borderRadius: BorderRadius.circular(12)),
       child: Icon(icon),
     );
   }

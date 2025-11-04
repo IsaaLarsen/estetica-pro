@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
+import '../../core/auth_storage.dart';          // ⬅️ token
+import '../../ds/colors.dart';                  // ⬅️ paleta (danger, etc.)
 import 'servicos_repo.dart';
 
 // DS
@@ -32,6 +34,37 @@ class ServicosPage extends ConsumerStatefulWidget {
 class _ServicosPageState extends ConsumerState<ServicosPage> {
   final _search = TextEditingController();
 
+  // Bem-vindo
+  String? _clienteNome;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCliente();
+  }
+
+  Future<void> _loadCliente() async {
+    try {
+      final dio = ApiClient.build();
+      final res = await dio.get('/auth/cliente/me'); // exige token
+      final nome = res.data['nome']?.toString() ?? res.data['name']?.toString();
+      setState(() => _clienteNome = nome ?? 'Cliente');
+    } catch (_) {
+      setState(() => _clienteNome = null); // sem login
+    }
+  }
+
+  Future<void> _logout() async {
+    try {
+      final dio = ApiClient.build();
+      await dio.post('/auth/cliente/logout');
+    } catch (_) {}
+    await AuthStorage.clearToken();
+    if (!mounted) return;
+    // volta para a raiz onde o SplashGate decide a tela
+    Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+  }
+
   @override
   void dispose() {
     _search.dispose();
@@ -48,15 +81,50 @@ class _ServicosPageState extends ConsumerState<ServicosPage> {
         title: 'Serviços',
         body: RefreshIndicator(
           onRefresh: () async {
+            await _loadCliente();
             await ref.refresh(servicosFutureProvider.future);
           },
           child: ListView(
             children: [
-              SearchField(
-                controller: _search,
-                hint: 'Buscar serviço...',
-                onChanged: (_) => setState(() {}),
+              // Header: busca + chip bem-vindo (direita)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SearchField(
+                        controller: _search,
+                        hint: 'Buscar serviço...',
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    if (_clienteNome != null)
+                      Container(
+                        padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: DSColors.primaryLight,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.person, size: 18, color: DSColors.primaryDark),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Bem-vindo, ${_clienteNome!}',
+                              style: const TextStyle(
+                                color: DSColors.primaryDark,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
               ),
+
               asyncServicos.when(
                 loading: () => const DSLoadingList(),
                 error: (err, st) => DSError(
@@ -94,8 +162,6 @@ class _ServicosPageState extends ConsumerState<ServicosPage> {
                         (s['duracao_minutos'] ?? s['duracao'] ?? '—')
                             .toString();
 
-
-                        // novo layout do card
                         return Card(
                           margin: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 8),
@@ -122,8 +188,7 @@ class _ServicosPageState extends ConsumerState<ServicosPage> {
                                 // Texto principal
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         nome,
@@ -167,8 +232,7 @@ class _ServicosPageState extends ConsumerState<ServicosPage> {
                                   height: 44,
                                   child: FilledButton(
                                     style: FilledButton.styleFrom(
-                                      backgroundColor:
-                                      const Color(0xFFEC4899), // rosa
+                                      backgroundColor: const Color(0xFFEC4899),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
@@ -179,7 +243,8 @@ class _ServicosPageState extends ConsumerState<ServicosPage> {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) => AgendamentoPage(servico: s),
+                                          builder: (_) =>
+                                              AgendamentoPage(servico: s),
                                         ),
                                       );
                                     },
@@ -204,7 +269,14 @@ class _ServicosPageState extends ConsumerState<ServicosPage> {
             ],
           ),
         ),
-        fab: null, // sem botão flutuante
+
+        // FAB de logout
+        fab: FloatingActionButton(
+          heroTag: 'logout-fab',
+          backgroundColor: DSColors.danger,
+          onPressed: _logout,
+          child: const Icon(Icons.logout, color: Colors.white),
+        ),
       ),
     );
   }
