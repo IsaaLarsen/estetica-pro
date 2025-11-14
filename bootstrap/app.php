@@ -12,10 +12,14 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
-            'auth.sistema' => \App\Http\Middleware\Autenticacao::class,
+            // 🔒 middleware de autenticação padrão do sistema
+            'auth' => \App\Http\Middleware\Autenticacao::class,
+
+            // 🧩 middleware de papéis (admin, funcionario, cliente)
+            'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);
     })
-
     ->withExceptions(function (Exceptions $exceptions): void {
         //
-    })->create();
+    })
+    ->create();

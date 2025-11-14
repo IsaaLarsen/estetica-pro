@@ -273,5 +273,9 @@
         @if (Route::has('login'))
             <div class="h-14.5 hidden lg:block"></div>
         @endif
+
+        @include('partials.change_password_modal')
+        @include('partials.toast')
+
     </body>
 </html>

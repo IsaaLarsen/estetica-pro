@@ -182,4 +182,8 @@
         }
     </script>
 </body>
+
+@include('partials.change_password_modal')
+@include('partials.toast')
+
 </html>

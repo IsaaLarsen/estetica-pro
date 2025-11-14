@@ -211,5 +211,9 @@
             }
         });
     </script>
+
+@include('partials.change_password_modal')
+@include('partials.toast')
+
 </body>
 </html>
