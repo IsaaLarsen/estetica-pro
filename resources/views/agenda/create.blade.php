@@ -42,7 +42,7 @@
             $statusValue = old('status', $isEdit ? ($agenda->status ?? 'agendado') : 'agendado');
         @endphp
 
-        <form method="POST" action="{{ $action }}">
+        <form method="POST" action="{{ $action }}" id="agendaForm">
             @csrf
             @if($isEdit)
                 @method('PUT')
@@ -89,8 +89,16 @@
 
                 <div class="form-group">
                     <label for="data" style="font-weight:500;">Data *</label>
-                    <input type="date" id="data" name="data" value="{{ $dataValue }}" required
-                        style="width:100%; padding:14px 16px; border:2px solid #e5e7eb; border-radius:12px;">
+                    <input
+                        type="date"
+                        id="data"
+                        name="data"
+                        value="{{ $dataValue }}"
+                        required
+                        min="{{ $isEdit ? '' : date('Y-m-d') }}"
+                        max="2100-12-31"
+                        style="width:100%; padding:14px 16px; border:2px solid #e5e7eb; border-radius:12px;"
+                    >
                 </div>
 
                 <div class="form-group">
@@ -103,10 +111,10 @@
                     <label for="status" style="font-weight:500;">Status</label>
                     <select id="status" name="status"
                         style="width:100%; padding:14px 16px; border:2px solid #e5e7eb; border-radius:12px;">
-                        <option value="agendado" {{ $statusValue === 'agendado' ? 'selected' : '' }}>Agendado</option>
+                        <option value="agendado"  {{ $statusValue === 'agendado'  ? 'selected' : '' }}>Agendado</option>
                         <option value="confirmado" {{ $statusValue === 'confirmado' ? 'selected' : '' }}>Confirmado</option>
-                        <option value="concluido" {{ $statusValue === 'concluido' ? 'selected' : '' }}>Concluído</option>
-                        <option value="cancelado" {{ $statusValue === 'cancelado' ? 'selected' : '' }}>Cancelado</option>
+                        <option value="concluido"  {{ $statusValue === 'concluido'  ? 'selected' : '' }}>Concluído</option>
+                        <option value="cancelado"  {{ $statusValue === 'cancelado'  ? 'selected' : '' }}>Cancelado</option>
                     </select>
                 </div>
 
@@ -168,7 +176,7 @@
           width: '100%',
           minimumInputLength: 2,
           ajax: {
-            url: '{{ route('clientes.search') }}',   // precisa da rota GET /clientes/search
+            url: '{{ route('clientes.search') }}',
             dataType: 'json',
             delay: 250,
             data: params => ({ q: params.term, page: params.page || 1 }),
@@ -187,6 +195,73 @@
             searching: () => 'Buscando...'
           }
         });
+
+        const dataInput = document.getElementById('data');
+        const horaInput = document.getElementById('hora');
+        const form = document.getElementById('agendaForm');
+
+        form.addEventListener('submit', function(e) {
+          // ---------- VALIDAR ANO (4 dígitos, faixa aceitável) ----------
+          if (dataInput.value) {
+            // type="date" => formato padrão: YYYY-MM-DD
+            const partes = dataInput.value.split('-');
+            if (partes.length === 3) {
+              const anoStr = partes[0];
+              const ano = parseInt(anoStr, 10);
+
+              if (!anoStr || anoStr.length !== 4 || isNaN(ano) || ano < 1900 || ano > 2100) {
+                e.preventDefault();
+                alert('Ano inválido. Use um ano com 4 dígitos entre 1900 e 2100.');
+                dataInput.focus();
+                return;
+              }
+            }
+          }
+
+          const agora = new Date();
+
+          // Para novos agendamentos, não permitir datas passadas
+          @if(!$isEdit)
+            if (dataInput.value && new Date(dataInput.value) < new Date().setHours(0,0,0,0)) {
+              e.preventDefault();
+              alert('Não é possível agendar para datas passadas.');
+              dataInput.focus();
+              return;
+            }
+          @endif
+
+          // Validar formato da hora
+          const hora = horaInput.value;
+          if (hora && !/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/.test(hora)) {
+            e.preventDefault();
+            alert('Formato de hora inválido. Use HH:MM (24 horas).');
+            horaInput.focus();
+            return;
+          }
+
+          // Validar se data+hora não é no passado (para novos agendamentos)
+          @if(!$isEdit)
+            if (dataInput.value && horaInput.value) {
+              const dataHoraAgendamento = new Date(dataInput.value + 'T' + horaInput.value);
+              if (dataHoraAgendamento < agora) {
+                e.preventDefault();
+                alert('Não é possível agendar para horários no passado.');
+                horaInput.focus();
+                return;
+              }
+            }
+          @endif
+        });
+
+        // Validação em tempo real para observações
+        const observacoes = document.getElementById('observacoes');
+        if (observacoes) {
+          observacoes.addEventListener('input', function() {
+            if (this.value.length > 500) {
+              this.value = this.value.substring(0, 500);
+            }
+          });
+        }
       });
     </script>
 @endsection

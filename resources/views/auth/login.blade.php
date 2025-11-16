@@ -184,7 +184,9 @@
                 @csrf
                 <div class="input-group">
                     <i class="fas fa-user"></i>
-                    <input type="text" id="cpf" name="cpf" placeholder="CPF" required>
+                    <input type="text" id="cpf" name="cpf" placeholder="CPF (apenas números)" required 
+                           pattern="\d{11}" title="Digite exatamente 11 números" 
+                           maxlength="11" oninput="this.value = this.value.replace(/\D/g, '')">
                 </div>
                 <div class="input-group">
                     <i class="fas fa-lock"></i>
@@ -208,6 +210,29 @@
             } else {
                 passwordInput.type = 'password';
                 icon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        });
+
+        // Validação do CPF no frontend
+        document.getElementById('cpf').addEventListener('input', function(e) {
+            // Remove qualquer caractere não numérico
+            this.value = this.value.replace(/\D/g, '');
+            
+            // Limita a 11 dígitos
+            if (this.value.length > 11) {
+                this.value = this.value.slice(0, 11);
+            }
+        });
+
+        // Validação antes do envio do formulário
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            const cpfInput = document.getElementById('cpf');
+            const cpfValue = cpfInput.value.replace(/\D/g, '');
+            
+            if (cpfValue.length !== 11) {
+                e.preventDefault();
+                alert('O CPF deve conter exatamente 11 números.');
+                cpfInput.focus();
             }
         });
     </script>

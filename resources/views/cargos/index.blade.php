@@ -15,7 +15,7 @@
             --warning: #f59e0b;
             --danger: #ef4444;
             --sidebar-width: 260px;
-        }
+        }a
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         /* IMPORTANTE: 11px aqui como você pediu */

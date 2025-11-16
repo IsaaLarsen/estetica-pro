@@ -29,11 +29,21 @@ class LoginController extends Controller
     public function autenticar(Request $request)
     {
         $request->validate([
-            'cpf'   => 'required|string',
+            'cpf'   => 'required|string|regex:/^\d{11}$/',
             'senha' => 'required|string',
+        ], [
+            'cpf.regex' => 'O CPF deve conter exatamente 11 números.',
         ]);
 
         $cpf = preg_replace('/\D/', '', $request->cpf);
+        
+        // Garantir que tem exatamente 11 dígitos numéricos
+        if (!preg_match('/^\d{11}$/', $cpf)) {
+            return back()->withErrors([
+                'cpf' => 'O CPF deve conter exatamente 11 números.'
+            ])->withInput();
+        }
+
         $usuario = DB::table('usuarios')->where('cpf', $cpf)->first();
 
         if ($usuario && Hash::check($request->senha, $usuario->senha)) {
@@ -175,10 +185,11 @@ class LoginController extends Controller
             abort(403, 'Acesso permitido apenas para administradores e funcionários.');
         }
 
-        // Coluna de data na tabela agenda (auto-detecta 'inicio' ou 'data')
-        $agendaDateCol = Schema::hasColumn('agenda', 'inicio')
+        // Coluna de data na tabela agendas (auto-detecta 'inicio' ou 'data')
+        $agendaTable = 'agendas';
+        $agendaDateCol = Schema::hasColumn($agendaTable, 'inicio')
             ? 'inicio'
-            : (Schema::hasColumn('agenda', 'data') ? 'data' : 'inicio');
+            : (Schema::hasColumn($agendaTable, 'data') ? 'data' : 'inicio');
 
         // Filtros
         $periodoDias   = (int)($request->get('periodo', 30));
@@ -201,7 +212,7 @@ class LoginController extends Controller
         try { $stats['total_clientes']     = DB::table('clientes')->count(); } catch (\Throwable $e) {}
         try { $stats['total_servicos']     = DB::table('servicos')->count(); } catch (\Throwable $e) {}
         try {
-            $stats['agendamentos_hoje'] = DB::table('agenda')
+            $stats['agendamentos_hoje'] = DB::table($agendaTable)
                 ->whereDate($agendaDateCol, now()->toDateString())
                 ->count();
         } catch (\Throwable $e) {}
@@ -211,9 +222,9 @@ class LoginController extends Controller
         try { $filtros['funcionarios'] = DB::table('funcionarios')->select('id','nome')->orderBy('nome')->get(); } catch (\Throwable $e) {}
         try { $filtros['servicos']     = DB::table('servicos')->select('id','nome')->orderBy('nome')->get(); } catch (\Throwable $e) {}
 
-        // Query base para agenda (aplica filtros + período)
-        $agendaBase = function() use ($agendaDateCol, $inicio, $fim, $funcionarioId, $servicoId) {
-            $q = DB::table('agenda as a')
+        // Query base para agendas (aplica filtros + período)
+        $agendaBase = function() use ($agendaTable, $agendaDateCol, $inicio, $fim, $funcionarioId, $servicoId) {
+            $q = DB::table($agendaTable . ' as a')
                 ->leftJoin('clientes as c', 'c.id', '=', 'a.cliente_id')
                 ->leftJoin('servicos as s', 's.id', '=', 'a.servico_id')
                 ->leftJoin('funcionarios as f', 'f.id', '=', 'a.funcionario_id')
@@ -236,7 +247,10 @@ class LoginController extends Controller
             }
 
             $rows = (clone $agendaBase)()
-                ->select(DB::raw("DATE_FORMAT(a.$agendaDateCol, '%d/%m') as dia"), DB::raw('COUNT(*) as total'))
+                ->select(
+                    DB::raw("DATE_FORMAT(a.$agendaDateCol, '%d/%m') as dia"),
+                    DB::raw('COUNT(*) as total')
+                )
                 ->groupBy('dia')
                 ->orderBy(DB::raw("STR_TO_DATE(dia, '%d/%m')"))
                 ->get();
@@ -255,9 +269,9 @@ class LoginController extends Controller
         try {
             // Qual coluna representa status?
             $statusCol = null;
-            if (Schema::hasColumn('agenda', 'status')) {
+            if (Schema::hasColumn($agendaTable, 'status')) {
                 $statusCol = 'status';
-            } elseif (Schema::hasColumn('agenda', 'situacao')) {
+            } elseif (Schema::hasColumn($agendaTable, 'situacao')) {
                 $statusCol = 'situacao';
             }
 
@@ -308,7 +322,10 @@ class LoginController extends Controller
                 ->orderByDesc('total')
                 ->limit(7)
                 ->get()
-                ->map(fn($r) => (object)['nome' => $r->nome ?? '—', 'total' => (int)$r->total])
+                ->map(fn($r) => (object)[
+                    'nome'  => $r->nome ?? '—',
+                    'total' => (int)$r->total
+                ])
                 ->toArray();
         } catch (\Throwable $e) {}
 
@@ -321,14 +338,17 @@ class LoginController extends Controller
                 ->orderByDesc('total')
                 ->limit(7)
                 ->get()
-                ->map(fn($r) => (object)['nome' => $r->nome ?? '—', 'total' => (int)$r->total])
+                ->map(fn($r) => (object)[
+                    'nome'  => $r->nome ?? '—',
+                    'total' => (int)$r->total
+                ])
                 ->toArray();
         } catch (\Throwable $e) {}
 
         // 5) Próximos agendamentos
         $proximos = [];
         try {
-            $proximos = DB::table('agenda as a')
+            $proximos = DB::table($agendaTable . ' as a')
                 ->leftJoin('clientes as c', 'c.id', '=', 'a.cliente_id')
                 ->leftJoin('servicos as s', 's.id', '=', 'a.servico_id')
                 ->leftJoin('funcionarios as f', 'f.id', '=', 'a.funcionario_id')

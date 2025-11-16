@@ -64,6 +64,12 @@ class AgendaController extends Controller
      */
     public function events(Request $request)
     {
+        $request->validate([
+            'start' => 'required|date',
+            'end'   => 'required|date',
+            'funcionario_id' => 'nullable|integer|exists:funcionarios,id'
+        ]);
+
         $tz = config('app.timezone', 'America/Sao_Paulo');
 
         // Normaliza janelas recebidas do FC para o timezone da aplicação
@@ -221,13 +227,27 @@ class AgendaController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'funcionario_id' => 'required|exists:funcionarios,id',
-            'cliente_id'     => 'required|exists:clientes,id',
-            'servico_id'     => 'required|exists:servicos,id',
-            'data'           => 'required|date',
-            'hora'           => 'required',
-            'status'         => 'nullable|in:agendado,confirmado,concluido,cancelado',
-            'observacoes'    => 'nullable|string',
+            'funcionario_id' => 'required|integer|exists:funcionarios,id',
+            'cliente_id'     => 'required|integer|exists:clientes,id',
+            'servico_id'     => 'required|integer|exists:servicos,id',
+            'data'           => 'required|date|after_or_equal:today',
+            'hora'           => 'required|date_format:H:i',
+            'status'         => 'required|in:agendado,confirmado,concluido,cancelado',
+            'observacoes'    => 'nullable|string|max:500',
+        ], [
+            'funcionario_id.required' => 'Selecione um funcionário.',
+            'funcionario_id.exists'   => 'Funcionário selecionado não existe.',
+            'cliente_id.required'     => 'Selecione um cliente.',
+            'cliente_id.exists'       => 'Cliente selecionado não existe.',
+            'servico_id.required'     => 'Selecione um serviço.',
+            'servico_id.exists'       => 'Serviço selecionado não existe.',
+            'data.required'           => 'Informe a data do agendamento.',
+            'data.after_or_equal'     => 'A data não pode ser anterior a hoje.',
+            'hora.required'           => 'Informe o horário do agendamento.',
+            'hora.date_format'        => 'Formato de hora inválido (use HH:MM).',
+            'status.required'         => 'Selecione o status do agendamento.',
+            'status.in'               => 'Status selecionado é inválido.',
+            'observacoes.max'         => 'As observações não podem ter mais de 500 caracteres.',
         ]);
 
         $tz = config('app.timezone', 'America/Sao_Paulo');
@@ -239,6 +259,13 @@ class AgendaController extends Controller
         // Interpreta data/hora informadas como horário local da app
         $inicio = Carbon::parse($request->data.' '.$request->hora, $tz);
         $fim    = (clone $inicio)->addMinutes($duracao);
+
+        // Verifica se a data/hora não é no passado
+        if ($inicio->lt(now())) {
+            return back()
+                ->withErrors(['hora' => 'Não é possível agendar para horários no passado.'])
+                ->withInput();
+        }
 
         // horários do expediente (considerando exceções por dia)
         [$limiteInicio, $limiteFim, $min, $max] = $this->getLimitesExpedienteParaData($inicio);
@@ -286,6 +313,10 @@ class AgendaController extends Controller
      */
     public function edit($id)
     {
+        if (!is_numeric($id) || $id <= 0) {
+            abort(404, 'Agendamento não encontrado.');
+        }
+
         $tz = config('app.timezone', 'America/Sao_Paulo');
 
         $agenda = Agenda::findOrFail($id);
@@ -316,14 +347,31 @@ class AgendaController extends Controller
      */
     public function update(Request $request, $id)
     {
+        if (!is_numeric($id) || $id <= 0) {
+            abort(404, 'Agendamento não encontrado.');
+        }
+
         $request->validate([
-            'funcionario_id' => 'required|exists:funcionarios,id',
-            'cliente_id'     => 'required|exists:clientes,id',
-            'servico_id'     => 'required|exists:servicos,id',
+            'funcionario_id' => 'required|integer|exists:funcionarios,id',
+            'cliente_id'     => 'required|integer|exists:clientes,id',
+            'servico_id'     => 'required|integer|exists:servicos,id',
             'data'           => 'required|date',
-            'hora'           => 'required',
+            'hora'           => 'required|date_format:H:i',
             'status'         => 'required|in:agendado,confirmado,concluido,cancelado',
-            'observacoes'    => 'nullable|string',
+            'observacoes'    => 'nullable|string|max:500',
+        ], [
+            'funcionario_id.required' => 'Selecione um funcionário.',
+            'funcionario_id.exists'   => 'Funcionário selecionado não existe.',
+            'cliente_id.required'     => 'Selecione um cliente.',
+            'cliente_id.exists'       => 'Cliente selecionado não existe.',
+            'servico_id.required'     => 'Selecione um serviço.',
+            'servico_id.exists'       => 'Serviço selecionado não existe.',
+            'data.required'           => 'Informe a data do agendamento.',
+            'hora.required'           => 'Informe o horário do agendamento.',
+            'hora.date_format'        => 'Formato de hora inválido (use HH:MM).',
+            'status.required'         => 'Selecione o status do agendamento.',
+            'status.in'               => 'Status selecionado é inválido.',
+            'observacoes.max'         => 'As observações não podem ter mais de 500 caracteres.',
         ]);
 
         $tz = config('app.timezone', 'America/Sao_Paulo');
@@ -336,6 +384,14 @@ class AgendaController extends Controller
 
         $inicio = Carbon::parse($request->data.' '.$request->hora, $tz);
         $fim    = (clone $inicio)->addMinutes($duracao);
+
+        // Para edição, permitir datas passadas (já que pode ser um agendamento antigo)
+        // Mas verificar se não está tentando reagendar para o passado
+        if ($inicio->lt(now()) && $inicio->format('Y-m-d H:i') !== $agenda->inicio->format('Y-m-d H:i')) {
+            return back()
+                ->withErrors(['hora' => 'Não é possível reagendar para horários no passado.'])
+                ->withInput();
+        }
 
         // horários do expediente (considerando exceções por dia)
         [$limiteInicio, $limiteFim, $min, $max] = $this->getLimitesExpedienteParaData($inicio);
@@ -395,6 +451,10 @@ class AgendaController extends Controller
      */
     public function updateStatus(Request $request, $id)
     {
+        if (!is_numeric($id) || $id <= 0) {
+            return response()->json(['error' => 'Agendamento não encontrado.'], 404);
+        }
+
         $request->validate([
             'status' => 'required|in:agendado,confirmado,concluido,cancelado',
         ]);

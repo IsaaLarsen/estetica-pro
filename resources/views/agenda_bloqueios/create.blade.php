@@ -248,11 +248,13 @@
         }
     </style>
 
+    @php $isEdit = isset($bloqueio); @endphp
+
     <div class="content">
         <div class="form-container">
             <div class="page-header">
                 <h1 class="page-title">
-                    {{ isset($bloqueio) ? 'Editar Bloqueio' : 'Novo Bloqueio' }}
+                    {{ $isEdit ? 'Editar Bloqueio' : 'Novo Bloqueio' }}
                 </h1>
                 <a href="{{ route('agenda.bloqueios.index') }}" class="back-link">
                     <i class="fas fa-arrow-left"></i> Voltar à lista
@@ -269,9 +271,9 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ isset($bloqueio) ? route('agenda.bloqueios.update', $bloqueio->id) : route('agenda.bloqueios.store') }}">
+            <form method="POST" action="{{ $isEdit ? route('agenda.bloqueios.update', $bloqueio->id) : route('agenda.bloqueios.store') }}">
                 @csrf
-                @if(isset($bloqueio))
+                @if($isEdit)
                     @method('PUT')
                 @endif
 
@@ -280,9 +282,9 @@
                     <div class="form-group">
                         <label for="funcionarios">Profissionais</label>
                         <select id="funcionarios" name="funcionarios[]" multiple required
-                                @if(old('aplicar_todos', isset($bloqueio) ? $bloqueio->aplicar_todos : '')) disabled @endif>
+                                @if(old('aplicar_todos', $isEdit ? $bloqueio->aplicar_todos : '') ) disabled @endif>
                             @php
-                                $oldFuncionarios = collect(old('funcionarios', isset($bloqueio) ? $bloqueio->funcionarios->pluck('id') : []));
+                                $oldFuncionarios = collect(old('funcionarios', $isEdit ? $bloqueio->funcionarios->pluck('id') : []));
                             @endphp
 
                             @foreach($funcionarios as $f)
@@ -300,10 +302,10 @@
 
                     {{-- Aplicar a todos --}}
                     <div class="checkbox-group">
-                        <div class="checkbox-custom {{ old('aplicar_todos', isset($bloqueio) ? $bloqueio->aplicar_todos : '') ? 'checked' : '' }}"
+                        <div class="checkbox-custom {{ old('aplicar_todos', $isEdit ? $bloqueio->aplicar_todos : '') ? 'checked' : '' }}"
                              id="customCheckbox"></div>
                         <input type="checkbox" name="aplicar_todos" id="aplicar_todos" value="1"
-                               {{ old('aplicar_todos', isset($bloqueio) ? $bloqueio->aplicar_todos : '') ? 'checked' : '' }}
+                               {{ old('aplicar_todos', $isEdit ? $bloqueio->aplicar_todos : '') ? 'checked' : '' }}
                                style="display: none;">
                         <label for="aplicar_todos" class="checkbox-label">Aplicar a todos os profissionais</label>
                     </div>
@@ -312,13 +314,20 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="data_inicio">Data início</label>
-                            <input type="date" id="data_inicio" name="data_inicio"
-                                   value="{{ old('data_inicio', isset($bloqueio) ? $bloqueio->inicio->format('Y-m-d') : '') }}" required>
+                            <input
+                                type="date"
+                                id="data_inicio"
+                                name="data_inicio"
+                                value="{{ old('data_inicio', $isEdit ? $bloqueio->inicio->format('Y-m-d') : '') }}"
+                                required
+                                @unless($isEdit) min="{{ date('Y-m-d') }}" @endunless
+                                max="2100-12-31"
+                            >
                         </div>
                         <div class="form-group">
                             <label for="hora_inicio">Hora início</label>
                             <input type="time" id="hora_inicio" name="hora_inicio"
-                                   value="{{ old('hora_inicio', isset($bloqueio) ? $bloqueio->inicio->format('H:i') : '') }}" required>
+                                   value="{{ old('hora_inicio', $isEdit ? $bloqueio->inicio->format('H:i') : '') }}" required>
                         </div>
                     </div>
 
@@ -326,13 +335,20 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="data_fim">Data fim</label>
-                            <input type="date" id="data_fim" name="data_fim"
-                                   value="{{ old('data_fim', isset($bloqueio) ? $bloqueio->fim->format('Y-m-d') : '') }}" required>
+                            <input
+                                type="date"
+                                id="data_fim"
+                                name="data_fim"
+                                value="{{ old('data_fim', $isEdit ? $bloqueio->fim->format('Y-m-d') : '') }}"
+                                required
+                                @unless($isEdit) min="{{ date('Y-m-d') }}" @endunless
+                                max="2100-12-31"
+                            >
                         </div>
                         <div class="form-group">
                             <label for="hora_fim">Hora fim</label>
                             <input type="time" id="hora_fim" name="hora_fim"
-                                   value="{{ old('hora_fim', isset($bloqueio) ? $bloqueio->fim->format('H:i') : '') }}" required>
+                                   value="{{ old('hora_fim', $isEdit ? $bloqueio->fim->format('H:i') : '') }}" required>
                         </div>
                     </div>
 
@@ -340,7 +356,7 @@
                     <div class="form-group">
                         <label for="motivo">Motivo (opcional)</label>
                         <input type="text" id="motivo" name="motivo"
-                               value="{{ old('motivo', isset($bloqueio) ? $bloqueio->motivo : '') }}"
+                               value="{{ old('motivo', $isEdit ? $bloqueio->motivo : '') }}"
                                placeholder="Férias, treinamento, manutenção...">
                     </div>
                 </div>
@@ -351,7 +367,7 @@
                     </a>
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save" style="margin-right:8px;"></i>
-                        {{ isset($bloqueio) ? 'Atualizar Bloqueio' : 'Salvar Bloqueio' }}
+                        {{ $isEdit ? 'Atualizar Bloqueio' : 'Salvar Bloqueio' }}
                     </button>
                 </div>
             </form>
@@ -364,6 +380,7 @@
             const chk = document.getElementById('aplicar_todos');
             const customCheckbox = document.getElementById('customCheckbox');
             const sel = document.getElementById('funcionarios');
+            const form = document.querySelector('form');
 
             // Toggle do checkbox customizado
             customCheckbox.addEventListener('click', function() {
@@ -399,6 +416,86 @@
             // Inicializar estado
             toggleSelect();
             updateCustomCheckbox();
+
+            // --------- Validações de data/hora ---------
+            const dataInicioInput = document.getElementById('data_inicio');
+            const dataFimInput    = document.getElementById('data_fim');
+            const horaInicioInput = document.getElementById('hora_inicio');
+            const horaFimInput    = document.getElementById('hora_fim');
+
+            function validarAno(campo, label) {
+                if (!campo.value) return true;
+                const partes = campo.value.split('-'); // YYYY-MM-DD
+                if (partes.length !== 3) return true;
+
+                const anoStr = partes[0];
+                const ano = parseInt(anoStr, 10);
+
+                if (!anoStr || anoStr.length !== 4 || isNaN(ano) || ano < 1900 || ano > 2100) {
+                    alert('Ano inválido em "' + label + '". Use um ano com 4 dígitos entre 1900 e 2100.');
+                    campo.focus();
+                    return false;
+                }
+                return true;
+            }
+
+            form.addEventListener('submit', function (e) {
+                // Ano válido nas duas datas
+                if (!validarAno(dataInicioInput, 'Data início')) {
+                    e.preventDefault();
+                    return;
+                }
+                if (!validarAno(dataFimInput, 'Data fim')) {
+                    e.preventDefault();
+                    return;
+                }
+
+                const hoje = new Date();
+                hoje.setHours(0,0,0,0);
+
+                // Para novos bloqueios, não permitir data de início no passado
+                @if(!$isEdit)
+                if (dataInicioInput.value) {
+                    const ini = new Date(dataInicioInput.value + 'T00:00');
+                    if (ini < hoje) {
+                        e.preventDefault();
+                        alert('Não é possível criar bloqueio com data de início no passado.');
+                        dataInicioInput.focus();
+                        return;
+                    }
+                }
+                @endif
+
+                // Validar formato das horas
+                const regexHora = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
+
+                if (horaInicioInput.value && !regexHora.test(horaInicioInput.value)) {
+                    e.preventDefault();
+                    alert('Hora início inválida. Use o formato HH:MM (24 horas).');
+                    horaInicioInput.focus();
+                    return;
+                }
+
+                if (horaFimInput.value && !regexHora.test(horaFimInput.value)) {
+                    e.preventDefault();
+                    alert('Hora fim inválida. Use o formato HH:MM (24 horas).');
+                    horaFimInput.focus();
+                    return;
+                }
+
+                // Garantir que fim >= início
+                if (dataInicioInput.value && dataFimInput.value && horaInicioInput.value && horaFimInput.value) {
+                    const inicioDateTime = new Date(dataInicioInput.value + 'T' + horaInicioInput.value);
+                    const fimDateTime    = new Date(dataFimInput.value   + 'T' + horaFimInput.value);
+
+                    if (fimDateTime < inicioDateTime) {
+                        e.preventDefault();
+                        alert('A data/hora de fim não pode ser menor que a data/hora de início.');
+                        dataFimInput.focus();
+                        return;
+                    }
+                }
+            });
         });
     </script>
 

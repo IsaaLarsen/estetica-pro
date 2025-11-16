@@ -10,30 +10,37 @@ use App\Http\Controllers\AgendaController;
 use App\Http\Controllers\AgendaBloqueioController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\ComissaoController;
+use App\Http\Controllers\RelatorioController;
 
 Route::get('/', fn() => redirect()->route('login'));
 
-// Login
+// ===========================
+// Login / Logout
+// ===========================
 Route::get('/login', [LoginController::class, 'index'])->name('login');
 Route::post('/login', [LoginController::class, 'autenticar'])->name('login.autenticar');
-Route::post('/me/senha', [\App\Http\Controllers\LoginController::class, 'updatePassword'])
+
+Route::post('/me/senha', [LoginController::class, 'updatePassword'])
     ->name('me.senha.update')
     ->middleware(['auth']);
-Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
-Route::get('/logout', [LoginController::class, 'logout']); // fallback GET (para botões/link normais)
 
-Route::get('/clientes/search', [\App\Http\Controllers\ClienteController::class, 'search'])
+// Logout (POST preferido) + fallback GET para botões/link normais
+Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+Route::get('/logout', [LoginController::class, 'logout']);
+
+// ===========================
+// Busca rápida de clientes
+// ===========================
+Route::get('/clientes/search', [ClienteController::class, 'search'])
     ->name('clientes.search')
     ->middleware(['auth','role:admin,funcionario']);
 
+// ===========================
 // Dashboard (apenas admin e funcionário)
+// ===========================
 Route::get('/dashboard', [LoginController::class, 'dashboard'])
     ->middleware(['auth', 'role:admin,funcionario'])
     ->name('dashboard');
-
-// Logout (POST preferido) + fallback GET para teu link atual
-Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
-Route::get('/logout', [LoginController::class, 'logout']); // adicionada p/ evitar MethodNotAllowed
 
 // (opcional) padrões de parâmetro numéricos
 Route::pattern('funcionario', '[0-9]+');
@@ -133,5 +140,24 @@ Route::delete('/settings/agenda/excecoes/{id}', [SettingController::class, 'dest
 Route::get('/comissoes',                    [ComissaoController::class, 'index'])->name('comissoes.index')->middleware(['auth','role:admin']);
 Route::post('/comissoes/{id}/pagar',        [ComissaoController::class, 'marcarPago'])->name('comissoes.pagar')->middleware(['auth','role:admin']);
 Route::post('/comissoes/{id}/estornar',     [ComissaoController::class, 'estornar'])->name('comissoes.estornar')->middleware(['auth','role:admin']);
+
+// ===========================
+// Relatórios
+// ===========================
+Route::prefix('relatorios')
+    ->middleware(['auth','role:admin,funcionario'])
+    ->group(function () {
+        Route::get('/', [RelatorioController::class, 'index'])
+            ->name('relatorios.index');
+
+        Route::get('/agendamentos', [RelatorioController::class, 'agendamentos'])
+            ->name('relatorios.agendamentos');
+
+        Route::get('/comissoes', [RelatorioController::class, 'comissoes'])
+            ->name('relatorios.comissoes');
+
+        Route::get('/comissoes/pdf', [RelatorioController::class, 'comissoesPdf'])
+            ->name('relatorios.comissoes.pdf');
+    });
 
 // EOF

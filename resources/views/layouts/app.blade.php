@@ -166,6 +166,10 @@
             <a href="{{ route('cargos.index') }}" class="nav-item {{ request()->routeIs('cargos.*') ? 'active' : '' }}">
                 <i class="fas fa-briefcase"></i><span>Cargos</span>
             </a>
+            <a href="{{ route('relatorios.index') }}" class="nav-item {{ request()->routeIs('relatorios.*') ? 'active' : '' }}">
+                <i class="fas fa-file-alt"></i><span>Relatórios</span>
+            </a>
+
         </nav>
 
         <div class="sidebar-footer">
