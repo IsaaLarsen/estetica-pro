@@ -32,9 +32,9 @@
             line-height: 1.2;
         }
 
-        .header-actions { 
-            display: flex; 
-            gap: 10px; 
+        .header-actions {
+            display: flex;
+            gap: 10px;
             flex-wrap: wrap;
             align-items: center;
         }
@@ -66,26 +66,26 @@
             color: #fff;
         }
 
-        .btn-icon { 
-            margin-right: 8px; 
+        .btn-icon {
+            margin-right: 8px;
             font-size: 14px;
         }
 
-        .filter-section { 
-            display: flex; 
-            align-items: center; 
-            gap: 12px; 
-            flex-wrap: wrap; 
+        .filter-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
         }
 
-        .filter-label { 
-            font-weight: 500; 
-            color: var(--text); 
-            white-space: nowrap; 
+        .filter-label {
+            font-weight: 500;
+            color: var(--text);
+            white-space: nowrap;
             font-size: 14px;
         }
 
-        .filter-select { 
+        .filter-select {
             padding: 10px 12px;
             border: 2px solid #f3d1e5;
             border-radius: 12px;
@@ -97,29 +97,29 @@
             box-sizing: border-box;
         }
 
-        .alert { 
-            padding: 16px; 
-            border-radius: 12px; 
-            margin-bottom: 20px; 
-            display: flex; 
-            align-items: center; 
-            gap: 12px; 
+        .alert {
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
-        .alert-success { 
-            background: #ecfdf5; 
-            color: #065f46; 
-            border: 1px solid #a7f3d0; 
+        .alert-success {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
         }
 
-        .calendar-container { 
-            background: #fff; 
-            border-radius: 16px; 
-            overflow: hidden; 
-            box-shadow: 0 4px 20px rgba(0,0,0,.05); 
-            margin-bottom: 30px; 
-            padding: 20px; 
-            height: 90vh; 
+        .calendar-container {
+            background: #fff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,.05);
+            margin-bottom: 30px;
+            padding: 20px;
+            height: 90vh;
         }
 
         #calendar { height: 100%; }
@@ -137,6 +137,11 @@
         .fc-event.st-confirmado { background: #10b981 !important; border-color: #10b981 !important; }
         .fc-event.st-concluido { background: #7e22ce !important; border-color: #7e22ce !important; }
         .fc-event.st-cancelado { background: #ef4444 !important; border-color: #ef4444 !important; }
+
+        /* BLOQUEIOS como faixa de fundo (enviados com display:'background') */
+        .fc-bg-event {
+            opacity: 0.6;
+        }
 
         .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(4px); }
         .modal-backdrop.active { display: flex; }
@@ -325,13 +330,54 @@
             modal.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
 
             const calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'timeGridWeek', locale:'pt-br', timeZone:'local', nowIndicator:true, allDaySlot:false,
-                slotMinTime: '{{ $slotMinTime }}:00', slotMaxTime: '{{ $slotMaxTime }}:00', height:'90vh',
-                slotDuration:'00:15:00', snapDuration:'00:15:00', slotLabelInterval:{hours:1},
+                initialView: 'timeGridWeek',
+                locale:'pt-br',
+                timeZone:'local',
+                nowIndicator:true,
+                allDaySlot:false,
+                slotMinTime: '{{ $slotMinTime }}:00',
+                slotMaxTime: '{{ $slotMaxTime }}:00',
+                height:'90vh',
+                slotDuration:'00:15:00',
+                snapDuration:'00:15:00',
+                slotLabelInterval:{hours:1},
                 slotLabelFormat:{hour:'2-digit', minute:'2-digit', hour12:false},
+
                 headerToolbar:{ left:'prev,next today', center:'title', right:'timeGridWeek,timeGridDay,listWeek' },
                 buttonText:{ today:'Hoje', week:'Semana', day:'Dia', list:'Lista' },
-                events:{ url:'{{ route('agenda.events') }}', extraParams:()=>({ funcionario_id: filtro.value || '' }) },
+
+                events:{
+                    url:'{{ route('agenda.events') }}',
+                    extraParams:()=>({ funcionario_id: filtro.value || '' })
+                },
+
+                // Permite lidar com bloqueios no futuro (se usar seleção/drag)
+                selectable: true,
+                editable: false,
+
+                // Impede seleção em período bloqueado
+                selectAllow: function(selectInfo) {
+                    const bloqueios = calendar.getEvents().filter(ev =>
+                        ev.extendedProps && ev.extendedProps.tipo === 'bloqueio'
+                    );
+                    for (const b of bloqueios) {
+                        if (selectInfo.start < b.end && selectInfo.end > b.start) {
+                            alert('Este horário está bloqueado na agenda.');
+                            return false;
+                        }
+                    }
+                    return true;
+                },
+
+                // Impede sobreposição de eventos em bloqueios, caso um dia use drag/resize
+                eventOverlap: function(stillEvent, movingEvent) {
+                    if (stillEvent.extendedProps?.tipo === 'bloqueio'
+                        && movingEvent.extendedProps?.tipo !== 'bloqueio') {
+                        return false;
+                    }
+                    return true;
+                },
+
                 eventDataTransform: function(raw){
                     const copy = {...raw};
                     if (typeof copy.start==='string') copy.start = ensureOffset(copy.start);
@@ -345,20 +391,54 @@
                     return copy;
                 },
                 eventTimeFormat:{ hour:'2-digit', minute:'2-digit', hour12:false },
-                eventClassNames:(arg)=>{ const st=(arg.event.extendedProps?.status||'').toLowerCase(); return st?[`st-${st}`]:[]; },
-                eventDidMount:(info)=>{ info.el.addEventListener('dblclick', (e)=>{ e.preventDefault(); openModal(info.event); }); },
-                eventClick:(info)=>{ info.jsEvent.preventDefault(); }
+                eventClassNames:(arg)=>{
+                    const tipo = arg.event.extendedProps?.tipo || '';
+                    if (tipo === 'bloqueio') {
+                        return ['ev-bloqueio'];
+                    }
+                    const st=(arg.event.extendedProps?.status||'').toLowerCase();
+                    return st?[`st-${st}`]:[];
+                },
+
+                eventDidMount:(info)=>{
+                    const tipo = info.event.extendedProps?.tipo || '';
+                    // Não abre modal pra bloqueio
+                    if (tipo === 'bloqueio') {
+                        return;
+                    }
+                    info.el.addEventListener('dblclick', (e)=>{
+                        e.preventDefault();
+                        openModal(info.event);
+                    });
+                },
+
+                eventClick:(info)=>{
+                    // Evita abrir nada em clique simples (inclusive bloqueio)
+                    info.jsEvent.preventDefault();
+                }
             });
 
             mSalvarStatus.addEventListener('click', async ()=>{
                 if(!currentEvent) return;
-                const id = currentEvent.id; const url = statusUrlTpl.replace(':id', id);
+                const id = currentEvent.id;
+                const url = statusUrlTpl.replace(':id', id);
                 try {
-                    const resp = await fetch(url, { method:'POST', headers:{ 'Content-Type':'application/json', 'X-CSRF-TOKEN':csrfToken, 'Accept':'application/json' }, body:JSON.stringify({ status:mStatus.value }) });
+                    const resp = await fetch(url, {
+                        method:'POST',
+                        headers:{
+                            'Content-Type':'application/json',
+                            'X-CSRF-TOKEN':csrfToken,
+                            'Accept':'application/json'
+                        },
+                        body:JSON.stringify({ status:mStatus.value })
+                    });
                     if(!resp.ok) throw new Error('Falha ao atualizar status');
                     currentEvent.setExtendedProp('status', mStatus.value);
-                    calendar.refetchEvents(); closeModal();
-                } catch (err) { alert('Não foi possível atualizar o status. Tente novamente.'); }
+                    calendar.refetchEvents();
+                    closeModal();
+                } catch (err) {
+                    alert('Não foi possível atualizar o status. Tente novamente.');
+                }
             });
 
             filtro.addEventListener('change', ()=>{
@@ -372,6 +452,7 @@
             @if(!empty($selectedFuncionarioId))
                 document.getElementById('filtro-func').value = '{{ $selectedFuncionarioId }}';
             @endif
+
             calendar.render();
         });
     </script>

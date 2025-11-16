@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Agenda;
 use App\Models\AgendaBloqueio;
 use App\Models\Setting;
+use App\Models\AgendaExpedienteExcecao;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -17,8 +18,27 @@ class AgendaController extends Controller
      */
     public function index(Request $request)
     {
-        $min = Setting::get('expediente_inicio', '08:00');
-        $max = Setting::get('expediente_fim', '18:00');
+        // Horário padrão de expediente
+        $min = Setting::get('expediente_inicio', '08:00'); // ex: 08:00
+        $max = Setting::get('expediente_fim', '18:00');    // ex: 18:00
+
+        // Ajusta limites globais com base nas exceções (se existir algum dia abrindo mais cedo ou fechando mais tarde)
+        $minEx = AgendaExpedienteExcecao::min('inicio'); // ex: "05:00:00"
+        $maxEx = AgendaExpedienteExcecao::max('fim');    // ex: "21:00:00"
+
+        if ($minEx) {
+            $minExStr = substr($minEx, 0, 5); // 05:00
+            if ($minExStr < $min) {
+                $min = $minExStr;
+            }
+        }
+
+        if ($maxEx) {
+            $maxExStr = substr($maxEx, 0, 5); // 21:00
+            if ($maxExStr > $max) {
+                $max = $maxExStr;
+            }
+        }
 
         $funcionarios = DB::table('funcionarios')
             ->select('id','nome')
@@ -40,7 +60,7 @@ class AgendaController extends Controller
 
     /**
      * Feed JSON do FullCalendar (com filtro por funcionario_id)
-     * Retorna eventos + bloqueios (quando filtrado por funcionário)
+     * Retorna eventos + bloqueios
      */
     public function events(Request $request)
     {
@@ -52,12 +72,17 @@ class AgendaController extends Controller
 
         $funcionarioId = $request->get('funcionario_id'); // pode ser null/vazio (Todos)
 
-        // Agendamentos dentro do range (comparando em horário local da app)
+        // ============================
+        // 1) AGENDA NORMAL
+        // ============================
         $query = DB::table('agendas')
             ->join('funcionarios','funcionarios.id','=','agendas.funcionario_id')
             ->join('clientes','clientes.id','=','agendas.cliente_id')
             ->join('servicos','servicos.id','=','agendas.servico_id')
-            ->whereBetween('agendas.inicio', [$start->toDateTimeString(), $end->toDateTimeString()]);
+            ->whereBetween('agendas.inicio', [
+                $start->toDateTimeString(),
+                $end->toDateTimeString()
+            ]);
 
         if (!empty($funcionarioId)) {
             $query->where('agendas.funcionario_id', $funcionarioId);
@@ -86,7 +111,6 @@ class AgendaController extends Controller
             $status = strtolower($e->status ?? 'agendado');
             $colors = $statusColors[$status] ?? ['#6366f1','#4f46e5'];
 
-            // Interpreta o que está no banco como horário local da app e devolve ISO 8601 com offset
             $startIso = Carbon::parse($e->start, $tz)->toIso8601String();
             $endIso   = Carbon::parse($e->end,   $tz)->toIso8601String();
 
@@ -99,11 +123,12 @@ class AgendaController extends Controller
                 'className' => ['st-' . $status],
 
                 'extendedProps' => [
-                    'cliente_nome'     => $e->cliente,
-                    'servico_nome'     => $e->servico,
-                    'funcionario_nome' => $e->funcionario,
-                    'observacoes'      => $e->observacoes,
-                    'status'           => $status,
+                    'tipo'            => 'agendamento',
+                    'cliente_nome'    => $e->cliente,
+                    'servico_nome'    => $e->servico,
+                    'funcionario_nome'=> $e->funcionario,
+                    'observacoes'     => $e->observacoes,
+                    'status'          => $status,
                 ],
 
                 'backgroundColor' => $colors[0],
@@ -111,39 +136,63 @@ class AgendaController extends Controller
             ];
         });
 
-        // Bloqueios — somente quando um funcionário específico está filtrado
-        $bloqueios = collect();
-        if (!empty($funcionarioId)) {
-            $bloqueios = AgendaBloqueio::where('funcionario_id', $funcionarioId)
-                ->where(function($q) use ($start,$end){
-                    $q->whereBetween('inicio', [$start->toDateTimeString(), $end->toDateTimeString()])
-                      ->orWhereBetween('fim',   [$start->toDateTimeString(), $end->toDateTimeString()])
-                      ->orWhere(function($q2) use ($start,$end){
-                          $q2->where('inicio','<=',$start->toDateTimeString())
-                             ->where('fim','>=',$end->toDateTimeString());
-                      });
-                })
-                ->get()
-                ->map(function($b) use ($tz){
-                    $iniIso = ($b->inicio instanceof Carbon)
-                                ? $b->inicio->copy()->setTimezone($tz)->toIso8601String()
-                                : Carbon::parse($b->inicio, $tz)->toIso8601String();
+        // ============================
+        // 2) BLOQUEIOS
+        // ============================
 
-                    $fimIso = ($b->fim instanceof Carbon)
-                                ? $b->fim->copy()->setTimezone($tz)->toIso8601String()
-                                : Carbon::parse($b->fim, $tz)->toIso8601String();
-
-                    return [
-                        'title'   => 'Bloqueio',
-                        'start'   => $iniIso,
-                        'end'     => $fimIso,
-                        'display' => 'background',
-                        'overlap' => false,
-                        'backgroundColor' => '#fca5a5',
-                        'borderColor'     => '#ef4444',
-                    ];
+        $bloqueiosQuery = AgendaBloqueio::query()
+            ->when($funcionarioId, function ($q) use ($funcionarioId) {
+                // Quando um funcionário específico está filtrado:
+                // - bloqueios gerais (aplicar_todos = 1)
+                // - bloqueios que contenham esse funcionário na pivot
+                $q->where(function ($q2) use ($funcionarioId) {
+                    $q2->where('aplicar_todos', true)
+                       ->orWhereHas('funcionarios', function ($q3) use ($funcionarioId) {
+                           $q3->where('funcionario_id', $funcionarioId);
+                       });
                 });
-        }
+            }, function ($q) {
+                // Quando NÃO há funcionário filtrado, mostram-se apenas bloqueios gerais
+                $q->where('aplicar_todos', true);
+            })
+            ->where(function($q) use ($start,$end){
+                $inicioStr = $start->toDateTimeString();
+                $fimStr    = $end->toDateTimeString();
+
+                $q->whereBetween('inicio', [$inicioStr, $fimStr])
+                  ->orWhereBetween('fim',   [$inicioStr, $fimStr])
+                  ->orWhere(function($q2) use ($inicioStr,$fimStr){
+                      $q2->where('inicio','<=',$inicioStr)
+                         ->where('fim','>=',$fimStr);
+                  });
+            });
+
+        $bloqueios = $bloqueiosQuery->get()->map(function($b) use ($tz){
+            $iniIso = ($b->inicio instanceof Carbon)
+                        ? $b->inicio->copy()->setTimezone($tz)->toIso8601String()
+                        : Carbon::parse($b->inicio, $tz)->toIso8601String();
+
+            $fimIso = ($b->fim instanceof Carbon)
+                        ? $b->fim->copy()->setTimezone($tz)->toIso8601String()
+                        : Carbon::parse($b->fim, $tz)->toIso8601String();
+
+            return [
+                'id'    => 'bloqueio_'.$b->id,
+                'title' => $b->motivo ?: 'Bloqueio de agenda',
+                'start' => $iniIso,
+                'end'   => $fimIso,
+
+                'display' => 'background',
+                'overlap' => false,
+                'backgroundColor' => '#e5e7eb', // cinza clarinho
+                'borderColor'     => '#9ca3af',
+
+                'extendedProps' => [
+                    'tipo'   => 'bloqueio',
+                    'motivo' => $b->motivo,
+                ],
+            ];
+        });
 
         return response()->json($eventos->concat($bloqueios)->values());
     }
@@ -191,15 +240,13 @@ class AgendaController extends Controller
         $inicio = Carbon::parse($request->data.' '.$request->hora, $tz);
         $fim    = (clone $inicio)->addMinutes($duracao);
 
-        // horários do expediente
-        $min = Setting::get('expediente_inicio', '08:00');
-        $max = Setting::get('expediente_fim',    '18:00');
-
-        $limiteInicio = Carbon::parse($inicio->format('Y-m-d').' '.$min, $tz);
-        $limiteFim    = Carbon::parse($inicio->format('Y-m-d').' '.$max, $tz);
+        // horários do expediente (considerando exceções por dia)
+        [$limiteInicio, $limiteFim, $min, $max] = $this->getLimitesExpedienteParaData($inicio);
 
         if ($inicio->lt($limiteInicio) || $fim->gt($limiteFim)) {
-            return back()->withErrors(['hora' => "Horário fora do expediente configurado ({$min}–{$max})."])->withInput();
+            return back()
+                ->withErrors(['hora' => "Horário fora do expediente configurado para este dia ({$min}–{$max})."])
+                ->withInput();
         }
 
         // sem sobreposição para o mesmo funcionário
@@ -215,16 +262,8 @@ class AgendaController extends Controller
             return back()->withErrors(['hora' => 'Já existe atendimento neste horário para o funcionário.'])->withInput();
         }
 
-        // respeitar bloqueios
-        $bloqueado = AgendaBloqueio::where('funcionario_id',$request->funcionario_id)
-            ->where(function($q) use ($inicio,$fim){
-                $q->whereBetween('inicio', [$inicio->copy(), $fim->copy()])
-                  ->orWhereBetween('fim',    [$inicio->copy(), $fim->copy()])
-                  ->orWhere(function($q2) use ($inicio,$fim){
-                      $q2->where('inicio','<=',$inicio)->where('fim','>=',$fim);
-                  });
-            })->exists();
-        if ($bloqueado) {
+        // respeitar bloqueios (gerais + específicos)
+        if ($this->existeBloqueioNoPeriodo($request->funcionario_id, $inicio, $fim)) {
             return back()->withErrors(['hora' => 'Período bloqueado para este funcionário.'])->withInput();
         }
 
@@ -298,15 +337,13 @@ class AgendaController extends Controller
         $inicio = Carbon::parse($request->data.' '.$request->hora, $tz);
         $fim    = (clone $inicio)->addMinutes($duracao);
 
-        // horários do expediente
-        $min = Setting::get('expediente_inicio', '08:00');
-        $max = Setting::get('expediente_fim',    '18:00');
-
-        $limiteInicio = Carbon::parse($inicio->format('Y-m-d').' '.$min, $tz);
-        $limiteFim    = Carbon::parse($inicio->format('Y-m-d').' '.$max, $tz);
+        // horários do expediente (considerando exceções por dia)
+        [$limiteInicio, $limiteFim, $min, $max] = $this->getLimitesExpedienteParaData($inicio);
 
         if ($inicio->lt($limiteInicio) || $fim->gt($limiteFim)) {
-            return back()->withErrors(['hora' => "Horário fora do expediente configurado ({$min}–{$max})."])->withInput();
+            return back()
+                ->withErrors(['hora' => "Horário fora do expediente configurado para este dia ({$min}–{$max})."])
+                ->withInput();
         }
 
         // sem sobreposição para o mesmo funcionário (ignorando o próprio evento)
@@ -323,16 +360,8 @@ class AgendaController extends Controller
             return back()->withErrors(['hora' => 'Já existe atendimento neste horário para o funcionário.'])->withInput();
         }
 
-        // respeitar bloqueios
-        $bloqueado = AgendaBloqueio::where('funcionario_id',$request->funcionario_id)
-            ->where(function($q) use ($inicio,$fim){
-                $q->whereBetween('inicio', [$inicio->copy(), $fim->copy()])
-                  ->orWhereBetween('fim',    [$inicio->copy(), $fim->copy()])
-                  ->orWhere(function($q2) use ($inicio,$fim){
-                      $q2->where('inicio','<=',$inicio)->where('fim','>=',$fim);
-                  });
-            })->exists();
-        if ($bloqueado) {
+        // respeitar bloqueios (gerais + específicos)
+        if ($this->existeBloqueioNoPeriodo($request->funcionario_id, $inicio, $fim)) {
             return back()->withErrors(['hora' => 'Período bloqueado para este funcionário.'])->withInput();
         }
 
@@ -349,16 +378,13 @@ class AgendaController extends Controller
         ]);
 
         // === HOOKS DE COMISSÃO ===
-        // se mudou para concluído (e não era concluído), gera comissão
         if ($request->status === 'concluido' && $antigoStatus !== 'concluido') {
             ComissaoService::gerarParaAgenda($agenda);
         }
 
-        // se estava concluído e mudou para cancelado, estorna
         if ($request->status === 'cancelado' && $antigoStatus === 'concluido') {
             ComissaoService::estornarPorAgendaId($agenda->id);
         }
-
 
         return redirect()->route('agenda.index', ['funcionario_id' => $request->funcionario_id])
             ->with('success','Agendamento atualizado com sucesso!');
@@ -375,29 +401,73 @@ class AgendaController extends Controller
 
         $agenda = Agenda::findOrFail($id);
 
-        // guarda o status antigo ANTES de atualizar
         $antigoStatus = $agenda->status;
 
-        // aplica novo status
         $agenda->update(['status' => $request->status]);
 
         // === HOOKS DE COMISSÃO ===
-        // se mudou para concluído (e não era concluído), gera comissão
         if ($request->status === 'concluido' && $antigoStatus !== 'concluido') {
             ComissaoService::gerarParaAgenda($agenda);
         }
 
-        // se estava concluído e mudou para cancelado, estorna
         if ($request->status === 'cancelado' && $antigoStatus === 'concluido') {
             ComissaoService::estornarPorAgendaId($agenda->id);
         }
-        // Gera ou estorna comissão conforme o novo status
-
 
         if ($request->wantsJson()) {
             return response()->json(['ok'=>true, 'status'=>$agenda->status]);
         }
 
         return back()->with('success','Status atualizado com sucesso!');
+    }
+
+    /**
+     * Verifica se existe bloqueio (geral ou específico) no período informado
+     */
+    private function existeBloqueioNoPeriodo(int $funcionarioId, Carbon $inicio, Carbon $fim): bool
+    {
+        return AgendaBloqueio::where(function ($q) use ($funcionarioId) {
+                $q->where('aplicar_todos', true)
+                  ->orWhereHas('funcionarios', function ($q2) use ($funcionarioId) {
+                      $q2->where('funcionario_id', $funcionarioId);
+                  });
+            })
+            ->where(function ($q) use ($inicio, $fim) {
+                $q->whereBetween('inicio', [$inicio, $fim])
+                  ->orWhereBetween('fim',    [$inicio, $fim])
+                  ->orWhere(function ($q2) use ($inicio, $fim) {
+                      $q2->where('inicio', '<=', $inicio)
+                         ->where('fim', '>=', $fim);
+                  });
+            })
+            ->exists();
+    }
+
+    /**
+     * Retorna limites de expediente (início/fim) para a data informada.
+     * Se houver exceção cadastrada para o dia, usa ela; senão, usa o padrão do Setting.
+     *
+     * @return array [Carbon $limiteInicio, Carbon $limiteFim, string $horaMin, string $horaMax]
+     */
+    private function getLimitesExpedienteParaData(Carbon $data): array
+    {
+        $tz = config('app.timezone', 'America/Sao_Paulo');
+
+        // Procura exceção de expediente para este dia
+        $excecao = AgendaExpedienteExcecao::whereDate('data', $data->toDateString())->first();
+
+        if ($excecao) {
+            $horaMin = substr($excecao->inicio, 0, 5); // "05:00"
+            $horaMax = substr($excecao->fim, 0, 5);    // "21:00"
+        } else {
+            // Sem exceção -> usa o padrão global
+            $horaMin = Setting::get('expediente_inicio', '08:00');
+            $horaMax = Setting::get('expediente_fim',    '18:00');
+        }
+
+        $limiteInicio = Carbon::parse($data->format('Y-m-d').' '.$horaMin, $tz);
+        $limiteFim    = Carbon::parse($data->format('Y-m-d').' '.$horaMax, $tz);
+
+        return [$limiteInicio, $limiteFim, $horaMin, $horaMax];
     }
 }
