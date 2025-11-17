@@ -36,10 +36,10 @@
             color:#fff; box-shadow:0 4px 14px rgba(236,72,153,.35);
         }
         .btn-primary:hover{ transform:translateY(-1px); box-shadow:0 6px 20px rgba(236,72,153,.5); }
-        .btn-light{
-            background:#f3f4f6; color:var(--text);
+        .btn-outline{
+            background:#fff; border:1px solid #e5e7eb; color:var(--text);
         }
-        .btn-light:hover{ background:#e5e7eb; }
+        .btn-outline:hover{ background:#f9fafb; }
         .btn-link{
             background:none; border:none;
             color:var(--primary);
@@ -141,8 +141,8 @@
         <div class="page-header">
             <h1 class="page-title">Relatório de Agendamentos</h1>
             <div class="header-actions">
-                <a href="{{ route('agenda.index') }}" class="btn btn-light">
-                    <i class="fas fa-calendar-alt btn-icon"></i> Ir para Agenda
+                <a href="{{ route('relatorios.index') }}" class="btn btn-outline">
+                    <i class="fas fa-arrow-left btn-icon"></i> Voltar aos relatórios
                 </a>
             </div>
         </div>
@@ -204,7 +204,7 @@
                 </p>
 
                 <div class="filters-actions">
-                    <button type="submit" class="btn btn-light">
+                    <button type="submit" class="btn btn-outline">
                         <i class="fas fa-filter btn-icon"></i> Aplicar filtros
                     </button>
 

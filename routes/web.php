@@ -110,6 +110,11 @@ Route::get('/agenda/events', [AgendaController::class, 'events'])
     ->name('agenda.events')
     ->middleware('auth');
 
+// 🔹 NOVA ROTA: buscar funcionários que realizam um serviço (AJAX)
+Route::get('/agenda/funcionarios-por-servico', [AgendaController::class, 'funcionariosPorServico'])
+    ->name('agenda.funcionarios_por_servico')
+    ->middleware(['auth']);
+
 // ROTAS COMPARTILHADAS (admin e funcionário)
 Route::middleware(['auth'])->group(function () {
     Route::get('/agenda/create', [AgendaController::class, 'create'])->name('agenda.create');
@@ -118,6 +123,9 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/agenda/{agenda}', [AgendaController::class, 'update'])->name('agenda.update');
     Route::post('/agenda/{agenda}/status', [AgendaController::class, 'updateStatus'])->name('agenda.status.update');
     Route::put('/agenda/{agenda}/status', [AgendaController::class, 'updateStatus'])->name('agenda.updateStatus');
+    Route::delete('/agenda/{agenda}', [AgendaController::class, 'destroy'])
+    ->name('agenda.destroy')
+    ->middleware(['auth', 'role:admin']);
 });
 
 // ===========================
@@ -151,6 +159,10 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/comissoes', [ComissaoController::class, 'index'])->name('comissoes.index');
     Route::post('/comissoes/{id}/pagar', [ComissaoController::class, 'marcarPago'])->name('comissoes.pagar');
     Route::post('/comissoes/{id}/estornar', [ComissaoController::class, 'estornar'])->name('comissoes.estornar');
+
+    // 🔁 REPROCESSAR / RECALCULAR TODAS AS COMISSÕES
+    Route::post('/comissoes/recalcular-todas', [ComissaoController::class, 'recalcularTodas'])
+        ->name('comissoes.recalcularTodas');
 });
 
 // ===========================

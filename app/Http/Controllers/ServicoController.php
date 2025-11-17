@@ -30,15 +30,17 @@ class ServicoController extends Controller
 
         // Apenas funcionários ativos
         $funcionarios = DB::table('funcionarios')
+            ->select('id', 'nome')          // só o que a tela precisa
             ->where('ativo', 1)
             ->orderBy('nome')
             ->get();
 
         return view('servicos.create', [
-            'usuario'      => Session::get('usuario'),
-            'servico'      => null,
-            'funcionarios' => $funcionarios,
-            'vinculados'   => [],
+            'usuario'                 => Session::get('usuario'),
+            'servico'                 => null,
+            'funcionarios'            => $funcionarios,
+            'vinculados'              => [],      // mantém nome antigo
+            'funcionariosSelecionados'=> [],      // nome novo mais intuitivo
         ]);
     }
 
@@ -86,6 +88,7 @@ class ServicoController extends Controller
 
         // Apenas funcionários ativos
         $funcionarios = DB::table('funcionarios')
+            ->select('id', 'nome')
             ->where('ativo', 1)
             ->orderBy('nome')
             ->get();
@@ -96,10 +99,11 @@ class ServicoController extends Controller
             ->toArray();
 
         return view('servicos.create', [
-            'usuario'      => Session::get('usuario'),
-            'servico'      => $servico,
-            'funcionarios' => $funcionarios,
-            'vinculados'   => $vinculados,
+            'usuario'                 => Session::get('usuario'),
+            'servico'                 => $servico,
+            'funcionarios'            => $funcionarios,
+            'vinculados'              => $vinculados,
+            'funcionariosSelecionados'=> $vinculados, // mesma coisa, dois nomes
         ]);
     }
 
