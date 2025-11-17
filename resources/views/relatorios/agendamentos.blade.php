@@ -29,6 +29,7 @@
             padding:10px 16px; border-radius:12px; border:none;
             cursor:pointer; font-weight:500; text-decoration:none;
             transition:.2s;
+            font-size:13px;
         }
         .btn-primary{
             background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 100%);
@@ -39,6 +40,14 @@
             background:#f3f4f6; color:var(--text);
         }
         .btn-light:hover{ background:#e5e7eb; }
+        .btn-link{
+            background:none; border:none;
+            color:var(--primary);
+            text-decoration:underline;
+            padding:0 4px;
+            cursor:pointer;
+            font-size:13px;
+        }
         .btn-icon{ margin-right:8px; }
 
         .filters-card{
@@ -49,6 +58,13 @@
         .filters-grid{
             display:grid; grid-template-columns: repeat(4, minmax(0,1fr));
             gap:12px; align-items:flex-end;
+        }
+        .filters-actions{
+            display:flex;
+            justify-content:flex-end;
+            gap:8px;
+            margin-top:8px;
+            flex-wrap:wrap;
         }
         label{ font-size:13px; font-weight:500; color:var(--text); margin-bottom:4px; display:block; }
         input[type="date"], select{
@@ -151,7 +167,7 @@
                             <option value="">Todos</option>
                             @foreach($funcionarios as $f)
                                 <option value="{{ $f->id }}"
-                                    {{ (string)$filtroFuncionarioId === (string)$f->id ? 'selected' : '' }}>
+                                    {{ (string)request('funcionario_id', $filtroFunc) === (string)$f->id ? 'selected' : '' }}>
                                     {{ $f->nome }}
                                 </option>
                             @endforeach
@@ -163,7 +179,7 @@
                             <option value="">Todos</option>
                             @foreach($servicos as $s)
                                 <option value="{{ $s->id }}"
-                                    {{ (string)$filtroServicoId === (string)$s->id ? 'selected' : '' }}>
+                                    {{ (string)request('servico_id', $filtroServico) === (string)$s->id ? 'selected' : '' }}>
                                     {{ $s->nome }}
                                 </option>
                             @endforeach
@@ -171,8 +187,8 @@
                     </div>
                     <div>
                         <label for="status">Status</label>
+                        @php $stSel = request('status', $filtroStatus); @endphp
                         <select id="status" name="status">
-                            @php $stSel = $filtroStatus; @endphp
                             <option value="">Todos</option>
                             <option value="agendado"   {{ $stSel === 'agendado'   ? 'selected' : '' }}>Agendado</option>
                             <option value="confirmado" {{ $stSel === 'confirmado' ? 'selected' : '' }}>Confirmado</option>
@@ -180,16 +196,28 @@
                             <option value="cancelado"  {{ $stSel === 'cancelado'  ? 'selected' : '' }}>Cancelado</option>
                         </select>
                     </div>
-                    <div style="align-self:flex-end;">
-                        <button type="submit" class="btn btn-primary" style="width:100%;">
-                            <i class="fas fa-filter btn-icon"></i> Aplicar filtros
-                        </button>
-                    </div>
                 </div>
+
                 <p style="font-size:12px; color:var(--text-light); margin-top:8px;">
                     Período considerado: <strong>{{ $inicio->format('d/m/Y') }}</strong> a
                     <strong>{{ $fim->format('d/m/Y') }}</strong>
                 </p>
+
+                <div class="filters-actions">
+                    <button type="submit" class="btn btn-light">
+                        <i class="fas fa-filter btn-icon"></i> Aplicar filtros
+                    </button>
+
+                    {{-- Exportar PDF com os mesmos filtros --}}
+                    <button type="submit"
+                            class="btn btn-primary"
+                            formaction="{{ route('relatorios.agendamentos.pdf') }}"
+                            formtarget="_blank">
+                        <i class="fas fa-file-pdf btn-icon"></i> Exportar PDF
+                    </button>
+
+                
+                </div>
             </form>
         </div>
 
@@ -299,9 +327,9 @@
                             @endphp
                             <tr>
                                 <td>{{ $dataHora }}</td>
-                                <td>{{ $item->cliente_nome }}</td>
-                                <td>{{ $item->servico_nome }}</td>
-                                <td>{{ $item->funcionario_nome }}</td>
+                                <td>{{ $item->cliente_nome ?? '—' }}</td>
+                                <td>{{ $item->servico_nome ?? '—' }}</td>
+                                <td>{{ $item->funcionario_nome ?? '—' }}</td>
                                 <td>
                                     <span class="badge-status" style="background:{{ $bg }}; color:{{ $fg }};">
                                         {{ strtolower($item->status ?? 'indefinido') }}

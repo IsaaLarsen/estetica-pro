@@ -5,11 +5,20 @@
 @section('content')
     <style>
         .content { padding: 11px; }
-        .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+        .page-header {
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            margin-bottom:24px;
+            flex-wrap:wrap;
+            gap:12px;
+        }
         .page-title {
-            font-size:28px; font-weight:700;
+            font-size:28px;
+            font-weight:700;
             background:linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+            -webkit-background-clip:text;
+            -webkit-text-fill-color:transparent;
         }
         .cards-grid {
             display:grid;
@@ -32,9 +41,15 @@
             box-shadow:0 10px 25px rgba(0,0,0,.08);
         }
         .report-icon {
-            width:40px;height:40px;border-radius:12px;
-            display:flex;align-items:center;justify-content:center;
-            background:rgba(236,72,153,.1);color:var(--primary);margin-bottom:10px;
+            width:40px;
+            height:40px;
+            border-radius:12px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background:rgba(236,72,153,.1);
+            color:var(--primary);
+            margin-bottom:10px;
         }
         .report-title { font-size:16px;font-weight:600;margin-bottom:4px; }
         .report-desc { font-size:13px;color:var(--text-light);margin-bottom:14px; }
@@ -63,6 +78,7 @@
         </div>
 
         <div class="cards-grid">
+            {{-- Relatório de Agendamentos --}}
             <div class="report-card">
                 <div>
                     <div class="report-icon">
@@ -82,6 +98,7 @@
                 </a>
             </div>
 
+            {{-- Relatório de Comissões --}}
             <div class="report-card">
                 <div>
                     <div class="report-icon" style="background:rgba(16,185,129,.08);color:#059669;">
@@ -90,13 +107,54 @@
                     <div class="report-title">Relatório de Comissões</div>
                     <div class="report-desc">
                         Consolidado de comissões por período e profissional,
-                        com totalização dos valores e exportação em PDF profissional.
+                        com totalização dos valores.
                     </div>
                     <div class="report-meta">
                         <i class="fas fa-filter"></i> Período · Funcionário · Status de pagamento
                     </div>
                 </div>
                 <a href="{{ route('relatorios.comissoes') }}" class="btn-report">
+                    Abrir relatório <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+
+            {{-- Relatório de Faturamento --}}
+            <div class="report-card">
+                <div>
+                    <div class="report-icon" style="background:rgba(37,99,235,.08);color:#2563eb;">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                    </div>
+                    <div class="report-title">Relatório de Faturamento</div>
+                    <div class="report-desc">
+                        Visão financeira com total de atendimentos, faturamento,
+                        ticket médio e análise por meio de pagamento.
+                    </div>
+                    <div class="report-meta">
+                        <i class="fas fa-filter"></i> Período · Profissional · Serviço · Meio de pagamento
+                    </div>
+                </div>
+                <a href="{{ route('relatorios.faturamento') }}" class="btn-report">
+                    Abrir relatório <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+
+            {{-- Relatório de Serviços --}}
+            <div class="report-card">
+                <div>
+                    <div class="report-icon" style="background:rgba(139,92,246,.08);color:#7c3aed;">
+                        <i class="fas fa-spa"></i>
+                    </div>
+                    <div class="report-title">Relatório de Serviços</div>
+                    <div class="report-desc">
+                        Ranking dos serviços que mais faturam, com quantidade de atendimentos,
+                        faturamento total e ticket médio por serviço.
+                    </div>
+                    <div class="report-meta">
+                        <i class="fas fa-filter"></i> Período
+                        {{-- se depois tiver categoria, dá pra acrescentar aqui --}}
+                    </div>
+                </div>
+                <a href="{{ route('relatorios.servicos') }}" class="btn-report">
                     Abrir relatório <i class="fas fa-arrow-right"></i>
                 </a>
             </div>

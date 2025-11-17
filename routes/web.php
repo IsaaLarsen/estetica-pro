@@ -89,75 +89,102 @@ Route::get('/cargos/{cargo}/funcionarios', [CargoController::class, 'funcionario
 Route::get('/teste-sessao', fn() => response()->json(session()->all()));
 
 // ===========================
-// Agenda (calendário + eventos + criar/editar/status)
+// AGENDA - ROTAS SIMPLIFICADAS
 // ===========================
-Route::get('/agenda',               [AgendaController::class,'index'])->name('agenda.index')->middleware(['auth','role:admin,funcionario']);
-Route::get('/agenda/events',        [AgendaController::class,'events'])->name('agenda.events')->middleware(['auth','role:admin,funcionario']);
-Route::get('/agenda/create',        [AgendaController::class,'create'])->name('agenda.create')->middleware(['auth','role:admin,funcionario']);
-Route::post('/agenda',              [AgendaController::class,'store'])->name('agenda.store')->middleware(['auth','role:admin,funcionario']);
 
-// ✍️ editar / atualizar agendamento
-Route::get('/agenda/{agenda}/edit', [AgendaController::class,'edit'])->name('agenda.edit')->middleware(['auth','role:admin,funcionario']);
-Route::put('/agenda/{agenda}',      [AgendaController::class,'update'])->name('agenda.update')->middleware(['auth','role:admin,funcionario']);
+// ROTA PARA MINHA AGENDA (FUNCIONÁRIOS) - ACESSO LIVRE PARA AUTENTICADOS
+Route::get('/minha-agenda', [AgendaController::class, 'minhaAgenda'])
+    ->name('minha.agenda')
+    ->middleware('auth');
 
-// ⚡ atualizar somente o status (compat: POST ou PUT)
-Route::post('/agenda/{agenda}/status', [AgendaController::class,'updateStatus'])->name('agenda.status.update')->middleware(['auth','role:admin,funcionario']);
-Route::put('/agenda/{agenda}/status',  [AgendaController::class,'updateStatus'])->name('agenda.updateStatus')->middleware(['auth','role:admin,funcionario']);
+Route::get('/minha-agenda/events', [AgendaController::class, 'meusEvents'])
+    ->name('minha.agenda.events')
+    ->middleware('auth');
+
+// ROTA PARA AGENDA COMPLETA (ADMIN) - ACESSO LIVRE PARA AUTENTICADOS
+Route::get('/agenda', [AgendaController::class, 'index'])
+    ->name('agenda.index')
+    ->middleware('auth');
+
+Route::get('/agenda/events', [AgendaController::class, 'events'])
+    ->name('agenda.events')
+    ->middleware('auth');
+
+// ROTAS COMPARTILHADAS (admin e funcionário)
+Route::middleware(['auth'])->group(function () {
+    Route::get('/agenda/create', [AgendaController::class, 'create'])->name('agenda.create');
+    Route::post('/agenda', [AgendaController::class, 'store'])->name('agenda.store');
+    Route::get('/agenda/{agenda}/edit', [AgendaController::class, 'edit'])->name('agenda.edit');
+    Route::put('/agenda/{agenda}', [AgendaController::class, 'update'])->name('agenda.update');
+    Route::post('/agenda/{agenda}/status', [AgendaController::class, 'updateStatus'])->name('agenda.status.update');
+    Route::put('/agenda/{agenda}/status', [AgendaController::class, 'updateStatus'])->name('agenda.updateStatus');
+});
 
 // ===========================
 // Bloqueios de agenda (apenas admin)
 // ===========================
-Route::get('/agenda/bloqueios',                    [AgendaBloqueioController::class,'index'])->name('agenda.bloqueios.index')->middleware(['auth','role:admin']);
-Route::get('/agenda/bloqueios/create',             [AgendaBloqueioController::class,'create'])->name('agenda.bloqueios.create')->middleware(['auth','role:admin']);
-Route::post('/agenda/bloqueios',                   [AgendaBloqueioController::class,'store'])->name('agenda.bloqueios.store')->middleware(['auth','role:admin']);
-Route::get('/agenda/bloqueios/{bloqueio}/edit',    [AgendaBloqueioController::class,'edit'])->name('agenda.bloqueios.edit')->middleware(['auth','role:admin']);
-Route::put('/agenda/bloqueios/{bloqueio}',         [AgendaBloqueioController::class,'update'])->name('agenda.bloqueios.update')->middleware(['auth','role:admin']);
-Route::delete('/agenda/bloqueios/{bloqueio}',      [AgendaBloqueioController::class,'destroy'])->name('agenda.bloqueios.destroy')->middleware(['auth','role:admin']);
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/agenda/bloqueios', [AgendaBloqueioController::class, 'index'])->name('agenda.bloqueios.index');
+    Route::get('/agenda/bloqueios/create', [AgendaBloqueioController::class, 'create'])->name('agenda.bloqueios.create');
+    Route::post('/agenda/bloqueios', [AgendaBloqueioController::class, 'store'])->name('agenda.bloqueios.store');
+    Route::get('/agenda/bloqueios/{bloqueio}/edit', [AgendaBloqueioController::class, 'edit'])->name('agenda.bloqueios.edit');
+    Route::put('/agenda/bloqueios/{bloqueio}', [AgendaBloqueioController::class, 'update'])->name('agenda.bloqueios.update');
+    Route::delete('/agenda/bloqueios/{bloqueio}', [AgendaBloqueioController::class, 'destroy'])->name('agenda.bloqueios.destroy');
+});
 
 // ===========================
-// Configurações da agenda (expediente início/fim + dias especiais)
+// Configurações da agenda (apenas admin)
 // ===========================
-Route::get('/settings/agenda',  [SettingController::class,'edit'])
-    ->name('settings.edit')
-    ->middleware(['auth','role:admin']);
-
-Route::post('/settings/agenda', [SettingController::class,'update'])
-    ->name('settings.update')
-    ->middleware(['auth','role:admin']);
-
-// 👉 Dias especiais de expediente (exceções)
-Route::post('/settings/agenda/excecoes', [SettingController::class, 'storeExcecao'])
-    ->name('settings.excecoes.store')
-    ->middleware(['auth', 'role:admin']);
-
-Route::delete('/settings/agenda/excecoes/{id}', [SettingController::class, 'destroyExcecao'])
-    ->name('settings.excecoes.destroy')
-    ->middleware(['auth', 'role:admin']);
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/settings/agenda', [SettingController::class, 'edit'])->name('settings.edit');
+    Route::post('/settings/agenda', [SettingController::class, 'update'])->name('settings.update');
+    
+    // 👉 Dias especiais de expediente (exceções)
+    Route::post('/settings/agenda/excecoes', [SettingController::class, 'storeExcecao'])->name('settings.excecoes.store');
+    Route::delete('/settings/agenda/excecoes/{id}', [SettingController::class, 'destroyExcecao'])->name('settings.excecoes.destroy');
+});
 
 // ===========================
-// Comissões
+// Comissões (apenas admin)
 // ===========================
-Route::get('/comissoes',                    [ComissaoController::class, 'index'])->name('comissoes.index')->middleware(['auth','role:admin']);
-Route::post('/comissoes/{id}/pagar',        [ComissaoController::class, 'marcarPago'])->name('comissoes.pagar')->middleware(['auth','role:admin']);
-Route::post('/comissoes/{id}/estornar',     [ComissaoController::class, 'estornar'])->name('comissoes.estornar')->middleware(['auth','role:admin']);
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/comissoes', [ComissaoController::class, 'index'])->name('comissoes.index');
+    Route::post('/comissoes/{id}/pagar', [ComissaoController::class, 'marcarPago'])->name('comissoes.pagar');
+    Route::post('/comissoes/{id}/estornar', [ComissaoController::class, 'estornar'])->name('comissoes.estornar');
+});
 
 // ===========================
-// Relatórios
+// Relatórios (agendamentos, comissões)
 // ===========================
 Route::prefix('relatorios')
     ->middleware(['auth','role:admin,funcionario'])
     ->group(function () {
-        Route::get('/', [RelatorioController::class, 'index'])
-            ->name('relatorios.index');
+        Route::get('/', [RelatorioController::class, 'index'])->name('relatorios.index');
 
-        Route::get('/agendamentos', [RelatorioController::class, 'agendamentos'])
-            ->name('relatorios.agendamentos');
+        Route::get('/agendamentos', [RelatorioController::class, 'agendamentos'])->name('relatorios.agendamentos');
+        Route::get('/agendamentos/pdf', [RelatorioController::class, 'agendamentosPdf'])->name('relatorios.agendamentos.pdf');
 
-        Route::get('/comissoes', [RelatorioController::class, 'comissoes'])
-            ->name('relatorios.comissoes');
-
-        Route::get('/comissoes/pdf', [RelatorioController::class, 'comissoesPdf'])
-            ->name('relatorios.comissoes.pdf');
+        Route::get('/comissoes', [RelatorioController::class, 'comissoes'])->name('relatorios.comissoes');
+        Route::get('/comissoes/pdf', [RelatorioController::class, 'comissoesPdf'])->name('relatorios.comissoes.pdf');
     });
+
+// ===========================
+// Relatórios financeiros (APENAS ADMIN)
+// ===========================
+Route::middleware(['auth','role:admin'])->group(function () {
+    // Faturamento
+    Route::get('/relatorios/faturamento', [RelatorioController::class, 'faturamento'])
+        ->name('relatorios.faturamento');
+
+    Route::get('/relatorios/faturamento/pdf', [RelatorioController::class, 'faturamentoPdf'])
+        ->name('relatorios.faturamento.pdf');
+
+    // Relatório de Serviços
+    Route::get('/relatorios/servicos', [RelatorioController::class, 'servicos'])
+        ->name('relatorios.servicos');
+
+    Route::get('/relatorios/servicos/pdf', [RelatorioController::class, 'servicosPdf'])
+        ->name('relatorios.servicos.pdf');
+});
 
 // EOF

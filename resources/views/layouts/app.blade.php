@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Estética PRO')</title>
+
+    <!-- Favicon (logo em alta resolução) -->
+    <link rel="icon" type="image/png" sizes="64x64" href="{{ asset('image/logoEP.png') }}">
+    <link rel="shortcut icon" type="image/png" sizes="64x64" href="{{ asset('image/logoEP.png') }}">
+
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -40,8 +45,16 @@
             height: 100vh;
             overflow-y: auto;
         }
-        .sidebar-header { padding: 24px; text-align: center; border-bottom: 1px solid rgba(255,255,255,.1); }
-        .sidebar-header h1 { font-size: 24px; font-weight: 700; }
+        .sidebar-header {
+            padding: 24px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,.1);
+        }
+        .sidebar-header h1{
+            font-size: 24px;
+            font-weight: 700;
+        }
+
         .sidebar-nav { flex: 1; padding: 20px 16px; display: flex; flex-direction: column; }
         .nav-item {
             display: flex; align-items: center; padding: 14px 16px; border-radius: 12px;
@@ -148,24 +161,59 @@
             <a href="{{ route('dashboard') }}" class="nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
                 <i class="fas fa-chart-line"></i><span>Dashboard</span>
             </a>
-            <a href="{{ route('agenda.index') }}" class="nav-item {{ request()->routeIs('agenda.*') ? 'active' : '' }}">
-                <i class="fas fa-calendar-alt"></i><span>Agenda</span>
-            </a>
-            <a href="{{ route('comissoes.index') }}" class="nav-item {{ request()->routeIs('comissoes.*') ? 'active' : '' }}">
-                <i class="fas fa-hand-holding-usd"></i><span>Comissões</span>
-            </a>
-            <a href="{{ route('funcionarios.index') }}" class="nav-item {{ request()->routeIs('funcionarios.*') ? 'active' : '' }}">
-                <i class="fas fa-users"></i><span>Funcionários</span>
-            </a>
-            <a href="{{ route('clientes.index') }}" class="nav-item {{ request()->routeIs('clientes.*') ? 'active' : '' }}">
-                <i class="fas fa-user"></i><span>Clientes</span>
-            </a>
+            
+            <!-- CORREÇÃO: Agenda condicional usando role da SESSÃO -->
+            @php
+                $user = session('usuario');
+                $isFuncionario = $user && ($user->role === 'funcionario');
+            @endphp
+            
+            @if($isFuncionario)
+                <!-- FUNCIONÁRIO: Vai para Minha Agenda -->
+                <a href="{{ route('minha.agenda') }}" class="nav-item {{ request()->routeIs('minha.agenda*') ? 'active' : '' }}">
+                    <i class="fas fa-calendar-alt"></i><span>Agenda</span>
+                </a>
+            @else
+                <!-- ADMIN: Vai para Agenda Completa -->
+                <a href="{{ route('agenda.index') }}" class="nav-item {{ request()->routeIs('agenda.*') ? 'active' : '' }}">
+                    <i class="fas fa-calendar-alt"></i><span>Agenda</span>
+                </a>
+            @endif
+
+            <!-- Comissões: Só admin vê -->
+            @if(!$isFuncionario)
+                <a href="{{ route('comissoes.index') }}" class="nav-item {{ request()->routeIs('comissoes.*') ? 'active' : '' }}">
+                    <i class="fas fa-hand-holding-usd"></i><span>Comissões</span>
+                </a>
+            @endif
+
+            <!-- Funcionários: Só admin vê -->
+            @if(!$isFuncionario)
+                <a href="{{ route('funcionarios.index') }}" class="nav-item {{ request()->routeIs('funcionarios.*') ? 'active' : '' }}">
+                    <i class="fas fa-users"></i><span>Funcionários</span>
+                </a>
+            @endif
+
+            <!-- Clientes: Só admin vê -->
+            @if(!$isFuncionario)
+                <a href="{{ route('clientes.index') }}" class="nav-item {{ request()->routeIs('clientes.*') ? 'active' : '' }}">
+                    <i class="fas fa-user"></i><span>Clientes</span>
+                </a>
+            @endif
+
+            <!-- Serviços: Admin e funcionário veem -->
             <a href="{{ route('servicos.index') }}" class="nav-item {{ request()->routeIs('servicos.*') ? 'active' : '' }}">
                 <i class="fas fa-scissors"></i><span>Serviços</span>
             </a>
-            <a href="{{ route('cargos.index') }}" class="nav-item {{ request()->routeIs('cargos.*') ? 'active' : '' }}">
-                <i class="fas fa-briefcase"></i><span>Cargos</span>
-            </a>
+
+            <!-- Cargos: Só admin vê -->
+            @if(!$isFuncionario)
+                <a href="{{ route('cargos.index') }}" class="nav-item {{ request()->routeIs('cargos.*') ? 'active' : '' }}">
+                    <i class="fas fa-briefcase"></i><span>Cargos</span>
+                </a>
+            @endif
+
+            <!-- Relatórios: Admin e funcionário veem -->
             <a href="{{ route('relatorios.index') }}" class="nav-item {{ request()->routeIs('relatorios.*') ? 'active' : '' }}">
                 <i class="fas fa-file-alt"></i><span>Relatórios</span>
             </a>
@@ -186,20 +234,36 @@
     <div class="main-content">
         <!-- Topbar -->
         <div class="topbar">
-            <div class="user-info">
-                <div class="user-avatar">EP</div>
-                <div class="user-details">
-                    <h3>{{ $usuario->nome ?? 'Usuário' }}</h3>
+            @php
+                $user = session('usuario');
+                $nomeUsuario = trim($user->nome ?? '');
+                $iniciais = 'EP';
+                if ($nomeUsuario !== '') {
+                    $partes = preg_split('/\s+/', $nomeUsuario);
+                    $primeira = $partes[0] ?? '';
+                    $segunda  = $partes[1] ?? ($partes[0] ?? '');
+                    $iniciais = mb_strtoupper(
+                        mb_substr($primeira, 0, 1) .
+                        mb_substr($segunda, 0, 1)
+                    );
+                }
+            @endphp
 
-                    @php
-                        $roleRaw = strtolower($usuario->role ?? $usuario->tipo ?? '');
-                        $papelExibicao = match ($roleRaw) {
-                            'admin'       => 'Administrador',
-                            'funcionario' => 'Funcionário',
-                            default       => ($roleRaw ? ucfirst($roleRaw) : '—'),
-                        };
-                    @endphp
-                    <p>{{ $papelExibicao }}</p>
+            <div class="user-info">
+                <div class="user-avatar">{{ $iniciais }}</div>
+                <div class="user-details">
+                    <h3>{{ $nomeUsuario !== '' ? $nomeUsuario : 'Usuário' }}</h3>
+                    <p>
+                        @php
+                            if ($user) {
+                                $role = $user->role ?? 'usuário';
+                                echo $role === 'funcionario' ? 'Funcionário' : 
+                                     ($role === 'admin' ? 'Administrador' : ucfirst($role));
+                            } else {
+                                echo 'Visitante';
+                            }
+                        @endphp
+                    </p>
                 </div>
             </div>
 

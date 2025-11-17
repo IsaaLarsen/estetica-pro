@@ -111,7 +111,7 @@
         <div class="table-container" style="background:#fff; border-radius:16px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.05);">
             <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid #f3f4f6;">
                 <h3 style="font-size:16px; font-weight:700;">Próximos agendamentos</h3>
-                <a href="{{ route('agenda.index') }}" style="text-decoration:none; font-weight:600; color:var(--primary);">ver agenda</a>
+            
             </div>
             <div style="overflow-x:auto;">
                 <table style="width:100%; border-collapse:collapse; min-width:600px;">
