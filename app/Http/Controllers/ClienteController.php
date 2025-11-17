@@ -76,7 +76,6 @@ class ClienteController extends Controller
 
         return redirect()->route('clientes.index')->with('success', 'Cliente cadastrado com sucesso!');
     }
-
     public function edit($id)
     {
         if ($r = $this->requireAuth()) return $r;
@@ -106,6 +105,8 @@ class ClienteController extends Controller
             'data_nascimento' => 'nullable|date',
             'senha'           => 'nullable|string|min:6', // opcional ao editar
             'ativo'           => 'nullable|boolean',
+            // novo: troca de senha opcional
+            'senha'           => 'nullable|string|min:6',
         ]);
 
         $cpf      = preg_replace('/\D+/', '', (string) $request->cpf);
@@ -130,7 +131,6 @@ class ClienteController extends Controller
 
         return redirect()->route('clientes.index')->with('success', 'Cliente atualizado com sucesso!');
     }
-
     public function destroy($id)
     {
         if ($r = $this->requireAuth()) return $r;

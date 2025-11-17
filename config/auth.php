@@ -71,6 +71,8 @@ return [
         // ],
     ],
 
+
+    'defaults_cliente_password' => env('CLIENTE_DEFAULT_PASSWORD', '123456'),
     /*
     |--------------------------------------------------------------------------
     | Resetting Passwords
