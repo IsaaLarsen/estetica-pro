@@ -23,20 +23,30 @@ class AgendaBloqueio extends Model
     ];
 
     /**
-     * Funcionários vinculados a este bloqueio
-     * (quando não for bloqueio geral).
+     * Funcionários vinculados ao bloqueio.
      */
     public function funcionarios(): BelongsToMany
     {
         return $this->belongsToMany(
             Funcionario::class,
-            'agenda_bloqueio_funcionario', // tabela pivot
-            'bloqueio_id',                 // fk do bloqueio
-            'funcionario_id'               // fk do funcionário
+            'agenda_bloqueio_funcionario',
+            'bloqueio_id',
+            'funcionario_id'
         );
     }
 
-    // Se em algum lugar antigo ainda tiver $bloqueio->funcionario,
-    // a gente pode voltar com este belongsTo aqui, importando BelongsTo certinho.
-    // Por enquanto tirei pra evitar erro e confusão com o novo modelo.
+    /**
+     * Enriquecimento do toArray para LOGS.
+     */
+    public function toArray()
+    {
+        $arr = parent::toArray();
+
+        // Adiciona nomes dos funcionários para exibir no LOG
+        $arr['funcionarios_nomes'] = $this->funcionarios
+            ? $this->funcionarios->pluck('nome')->toArray()
+            : [];
+
+        return $arr;
+    }
 }

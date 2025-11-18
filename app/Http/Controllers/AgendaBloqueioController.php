@@ -3,16 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Models\AgendaBloqueio;
+use App\Services\LogAuditoriaService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Session;
 
 class AgendaBloqueioController extends Controller
 {
     public function index()
     {
-        // Se algum dia você quiser usar os funcionários na tela de listagem,
-        // eles já estão carregados aqui:
+        if (!Session::has('usuario')) {
+            return redirect()->route('login');
+        }
+
+        $usuario = Session::get('usuario');
+        if (($usuario->role ?? null) !== 'admin') {
+            abort(403, 'Apenas administradores podem gerenciar bloqueios de agenda.');
+        }
+
         $funcionarios = DB::table('funcionarios')
             ->orderBy('nome')
             ->get();
@@ -27,6 +36,15 @@ class AgendaBloqueioController extends Controller
 
     public function create()
     {
+        if (!Session::has('usuario')) {
+            return redirect()->route('login');
+        }
+
+        $usuario = Session::get('usuario');
+        if (($usuario->role ?? null) !== 'admin') {
+            abort(403, 'Apenas administradores podem criar bloqueios de agenda.');
+        }
+
         $funcionarios = DB::table('funcionarios')
             ->orderBy('nome')
             ->get();
@@ -36,6 +54,15 @@ class AgendaBloqueioController extends Controller
 
     public function store(Request $request)
     {
+        if (!Session::has('usuario')) {
+            return redirect()->route('login');
+        }
+
+        $usuario = Session::get('usuario');
+        if (($usuario->role ?? null) !== 'admin') {
+            abort(403, 'Apenas administradores podem criar bloqueios de agenda.');
+        }
+
         $request->validate([
             'aplicar_todos'   => 'nullable|boolean',
             'funcionarios'    => 'array',
@@ -76,6 +103,12 @@ class AgendaBloqueioController extends Controller
             $bloqueio->funcionarios()->sync($request->funcionarios);
         }
 
+        // Carrega a relação para que os funcionários apareçam no JSON de log
+        $bloqueio->load('funcionarios');
+
+        // 🔐 LOG: criação de bloqueio
+        LogAuditoriaService::registrarModel('create', $bloqueio);
+
         return redirect()
             ->route('agenda.bloqueios.index')
             ->with('success', 'Bloqueio criado!');
@@ -83,6 +116,15 @@ class AgendaBloqueioController extends Controller
 
     public function edit($id)
     {
+        if (!Session::has('usuario')) {
+            return redirect()->route('login');
+        }
+
+        $usuario = Session::get('usuario');
+        if (($usuario->role ?? null) !== 'admin') {
+            abort(403, 'Apenas administradores podem editar bloqueios de agenda.');
+        }
+
         $bloqueio = AgendaBloqueio::with('funcionarios')->findOrFail($id);
 
         $funcionarios = DB::table('funcionarios')
@@ -94,7 +136,16 @@ class AgendaBloqueioController extends Controller
 
     public function update(Request $request, $id)
     {
-        $bloqueio = AgendaBloqueio::findOrFail($id);
+        if (!Session::has('usuario')) {
+            return redirect()->route('login');
+        }
+
+        $usuario = Session::get('usuario');
+        if (($usuario->role ?? null) !== 'admin') {
+            abort(403, 'Apenas administradores podem editar bloqueios de agenda.');
+        }
+
+        $bloqueio = AgendaBloqueio::with('funcionarios')->findOrFail($id);
 
         $request->validate([
             'aplicar_todos'   => 'nullable|boolean',
@@ -122,6 +173,9 @@ class AgendaBloqueioController extends Controller
                 ->withInput();
         }
 
+        // 🔐 LOG: snapshot ANTES (incluindo funcionários vinculados)
+        $dadosAntigos = $bloqueio->toArray();
+
         // Atualiza bloqueio
         $bloqueio->update([
             'aplicar_todos' => $request->boolean('aplicar_todos'),
@@ -138,6 +192,12 @@ class AgendaBloqueioController extends Controller
             $bloqueio->funcionarios()->detach();
         }
 
+        // Recarrega com funcionários atualizados
+        $bloqueio->load('funcionarios');
+
+        // 🔐 LOG: atualização de bloqueio (com diff campo a campo)
+        LogAuditoriaService::registrarModel('update', $bloqueio, $dadosAntigos);
+
         return redirect()
             ->route('agenda.bloqueios.index')
             ->with('success', 'Bloqueio atualizado!');
@@ -145,7 +205,21 @@ class AgendaBloqueioController extends Controller
 
     public function destroy($id)
     {
-        $bloqueio = AgendaBloqueio::findOrFail($id);
+        if (!Session::has('usuario')) {
+            return redirect()->route('login');
+        }
+
+        $usuario = Session::get('usuario');
+        if (($usuario->role ?? null) !== 'admin') {
+            abort(403, 'Apenas administradores podem remover bloqueios de agenda.');
+        }
+
+        // Carrega com funcionários para registrar no log
+        $bloqueio = AgendaBloqueio::with('funcionarios')->findOrFail($id);
+
+        // 🔐 LOG: registrar antes de remover
+        LogAuditoriaService::registrarDeleteModel($bloqueio);
+
         $bloqueio->delete();
 
         return redirect()

@@ -5,28 +5,26 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Setting;
 use App\Models\AgendaExpedienteExcecao;
+use App\Models\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Session;
+use Carbon\Carbon;
 
 class SettingController extends Controller
 {
     /**
-     * Tela de configurações da agenda:
-     * - expediente padrão (início/fim)
-     * - dias especiais de expediente (exceções por funcionário)
+     * Tela de configurações da agenda
      */
     public function edit()
     {
-        // Horário padrão já salvo (ou valores default)
         $inicio = Setting::get('expediente_inicio', '08:00');
-        $fim    = Setting::get('expediente_fim',    '18:00');
+        $fim    = Setting::get('expediente_fim', '18:00');
 
-        // Funcionários ativos para o multi-select
         $funcionarios = DB::table('funcionarios')
             ->where('ativo', 1)
             ->orderBy('nome')
             ->get();
 
-        // Todas as exceções com funcionários vinculados
         $excecoes = AgendaExpedienteExcecao::with('funcionarios')
             ->orderBy('data', 'asc')
             ->get();
@@ -35,7 +33,7 @@ class SettingController extends Controller
     }
 
     /**
-     * Salva o expediente padrão (início/fim)
+     * Atualiza expediente padrão
      */
     public function update(Request $request)
     {
@@ -53,8 +51,24 @@ class SettingController extends Controller
                 ->withInput();
         }
 
+        // Snapshot antigo para o log
+        $antigos = [
+            'expediente_inicio' => Setting::get('expediente_inicio'),
+            'expediente_fim'    => Setting::get('expediente_fim'),
+        ];
+
         Setting::set('expediente_inicio', $inicio);
         Setting::set('expediente_fim',    $fim);
+
+        // LOG
+        $this->registrarLogSettings(
+            'settings_update',
+            [
+                'expediente_inicio' => $inicio,
+                'expediente_fim'    => $fim
+            ],
+            $antigos
+        );
 
         return redirect()
             ->route('settings.edit')
@@ -62,10 +76,7 @@ class SettingController extends Controller
     }
 
     /**
-     * Cria uma nova exceção de expediente (dia especial)
-     * com opção de aplicar a todos ou só alguns funcionários.
-     *
-     * Rota: settings.excecoes.store
+     * Criar exceção de expediente
      */
     public function storeExcecao(Request $request)
     {
@@ -73,16 +84,16 @@ class SettingController extends Controller
             'data'          => 'required|date',
             'inicio'        => 'required|date_format:H:i',
             'fim'           => 'required|date_format:H:i',
-            'aplicar_todos' => 'nullable|boolean',
             'funcionarios'  => 'array',
             'funcionarios.*'=> 'exists:funcionarios,id',
+            'aplicar_todos' => 'nullable|boolean', // USADO SÓ PARA LÓGICA, NÃO SALVO!
         ]);
 
-        $data          = $request->data;
-        $inicio        = $request->inicio;
-        $fim           = $request->fim;
-        $aplicarTodos  = $request->boolean('aplicar_todos');
-        $funcionarios  = $request->funcionarios ?? [];
+        $data         = $request->data;
+        $inicio       = $request->inicio;
+        $fim          = $request->fim;
+        $aplicarTodos = $request->boolean('aplicar_todos');
+        $funcionarios = $request->funcionarios ?? [];
 
         if ($inicio >= $fim) {
             return back()
@@ -90,31 +101,34 @@ class SettingController extends Controller
                 ->withInput();
         }
 
-        // Se NÃO aplicar a todos, precisa ter pelo menos 1 funcionário
         if (!$aplicarTodos && empty($funcionarios)) {
             return back()
-                ->withErrors(['funcionarios' => 'Selecione pelo menos um profissional ou marque "Aplicar a todos".'])
+                ->withErrors(['funcionarios' => 'Selecione pelo menos um profissional.'])
                 ->withInput();
         }
 
-        // opcional: impedir duplicar dia com mesmo escopo (aqui estou impedindo qualquer dia repetido)
-        $jaExiste = AgendaExpedienteExcecao::whereDate('data', $data)->exists();
-        if ($jaExiste) {
+        // Impede dia duplicado
+        if (AgendaExpedienteExcecao::whereDate('data', $data)->exists()) {
             return back()
-                ->withErrors(['data' => 'Já existe um expediente especial cadastrado para esta data.'])
+                ->withErrors(['data' => 'Já existe um expediente especial nesta data.'])
                 ->withInput();
         }
 
         $excecao = AgendaExpedienteExcecao::create([
-            'data'          => $data,
-            'inicio'        => $inicio . ':00', // se tua coluna é time, isso funciona
-            'fim'           => $fim . ':00',
-            'aplicar_todos' => $aplicarTodos,
+            'data'   => $data,
+            'inicio' => $inicio . ':00',
+            'fim'    => $fim . ':00',
         ]);
 
         if (!$aplicarTodos) {
             $excecao->funcionarios()->sync($funcionarios);
         }
+
+        // LOG
+        $this->registrarLogSettings(
+            'excecao_create',
+            $excecao->toArray()
+        );
 
         return redirect()
             ->route('settings.edit')
@@ -122,17 +136,74 @@ class SettingController extends Controller
     }
 
     /**
-     * Remove uma exceção de expediente (dia especial)
-     * Rota: settings.excecoes.destroy
+     * Remover exceção
      */
     public function destroyExcecao($id)
     {
-        $excecao = AgendaExpedienteExcecao::findOrFail($id);
+        $excecao = AgendaExpedienteExcecao::with('funcionarios')->findOrFail($id);
+
+        // LOG antes de excluir
+        $this->registrarLogSettings(
+            'excecao_delete',
+            [],
+            $excecao->toArray()
+        );
+
         $excecao->funcionarios()->detach();
         $excecao->delete();
 
         return redirect()
             ->route('settings.edit')
             ->with('success', 'Dia especial de expediente removido com sucesso!');
+    }
+
+
+    /**
+     * 🔐 Helper geral para logs de settings
+     */
+    private function registrarLogSettings(string $action, array $dadosNovos, array $dadosAntigos = null)
+    {
+        $usuario = Session::get('usuario');
+
+        $rota      = request()->route()->getName();
+        $rotaPath  = request()->path();
+        $timestamp = Carbon::now()->format('Y-m-d H:i:s');
+
+        $detalhes = [
+            'timestamp' => $timestamp,
+            'rota_name' => $rota,
+            'rota_path' => $rotaPath,
+        ];
+
+        if ($dadosAntigos) {
+            // gerar diferenças campo a campo
+            $alteracoes = [];
+
+            foreach ($dadosNovos as $campo => $novo) {
+                $old = $dadosAntigos[$campo] ?? null;
+                if ($old !== $novo) {
+                    $alteracoes[$campo] = [
+                        'old' => $old,
+                        'new' => $novo,
+                    ];
+                }
+            }
+
+            $detalhes['dados_antigos'] = $dadosAntigos;
+            $detalhes['dados_novos']   = $dadosNovos;
+            $detalhes['alteracoes']    = $alteracoes;
+        } else {
+            $detalhes['dados_novos'] = $dadosNovos;
+        }
+
+        Log::create([
+            'usuario_id'   => $usuario->id ?? null,
+            'usuario_nome' => $usuario->nome ?? null,
+            'usuario_role' => $usuario->role ?? null,
+            'model'        => 'Settings',
+            'model_id'     => null,
+            'action'       => $action,
+            'details'      => $detalhes,
+        ]);
     }
 }

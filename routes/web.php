@@ -11,6 +11,7 @@ use App\Http\Controllers\AgendaBloqueioController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\ComissaoController;
 use App\Http\Controllers\RelatorioController;
+use App\Http\Controllers\LogController; // ⬅️ IMPORT DO LOG
 
 Route::get('/', fn() => redirect()->route('login'));
 
@@ -33,7 +34,7 @@ Route::get('/logout', [LoginController::class, 'logout']);
 // ===========================
 Route::get('/clientes/search', [ClienteController::class, 'search'])
     ->name('clientes.search')
-    ->middleware(['auth','role:admin,funcionario']);
+    ->middleware(['auth', 'role:admin,funcionario']);
 
 // ===========================
 // Dashboard (apenas admin e funcionário)
@@ -44,9 +45,9 @@ Route::get('/dashboard', [LoginController::class, 'dashboard'])
 
 // (opcional) padrões de parâmetro numéricos
 Route::pattern('funcionario', '[0-9]+');
-Route::pattern('servico',     '[0-9]+');
-Route::pattern('cliente',     '[0-9]+');
-Route::pattern('cargo',       '[0-9]+');
+Route::pattern('servico', '[0-9]+');
+Route::pattern('cliente', '[0-9]+');
+Route::pattern('cargo', '[0-9]+');
 
 // ===========================
 // Funcionários CRUD (sem show) + Redefinir Senha
@@ -77,13 +78,13 @@ Route::resource('clientes', ClienteController::class)
 // ===========================
 // Cargos CRUD (sem show)
 // ===========================
-Route::get('/cargos',                [CargoController::class, 'index'])->name('cargos.index')->middleware(['auth','role:admin']);
-Route::get('/cargos/create',         [CargoController::class, 'create'])->name('cargos.create')->middleware(['auth','role:admin']);
-Route::post('/cargos',               [CargoController::class, 'store'])->name('cargos.store')->middleware(['auth','role:admin']);
-Route::get('/cargos/{cargo}/edit',   [CargoController::class, 'edit'])->name('cargos.edit')->middleware(['auth','role:admin']);
-Route::put('/cargos/{cargo}',        [CargoController::class, 'update'])->name('cargos.update')->middleware(['auth','role:admin']);
-Route::delete('/cargos/{cargo}',     [CargoController::class, 'destroy'])->name('cargos.destroy')->middleware(['auth','role:admin']);
-Route::get('/cargos/{cargo}/funcionarios', [CargoController::class, 'funcionarios'])->name('cargos.funcionarios')->middleware(['auth','role:admin']);
+Route::get('/cargos', [CargoController::class, 'index'])->name('cargos.index')->middleware(['auth', 'role:admin']);
+Route::get('/cargos/create', [CargoController::class, 'create'])->name('cargos.create')->middleware(['auth', 'role:admin']);
+Route::post('/cargos', [CargoController::class, 'store'])->name('cargos.store')->middleware(['auth', 'role:admin']);
+Route::get('/cargos/{cargo}/edit', [CargoController::class, 'edit'])->name('cargos.edit')->middleware(['auth', 'role:admin']);
+Route::put('/cargos/{cargo}', [CargoController::class, 'update'])->name('cargos.update')->middleware(['auth', 'role:admin']);
+Route::delete('/cargos/{cargo}', [CargoController::class, 'destroy'])->name('cargos.destroy')->middleware(['auth', 'role:admin']);
+Route::get('/cargos/{cargo}/funcionarios', [CargoController::class, 'funcionarios'])->name('cargos.funcionarios')->middleware(['auth', 'role:admin']);
 
 // 🔍 Rota de teste da sessão (debug opcional)
 Route::get('/teste-sessao', fn() => response()->json(session()->all()));
@@ -124,8 +125,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/agenda/{agenda}/status', [AgendaController::class, 'updateStatus'])->name('agenda.status.update');
     Route::put('/agenda/{agenda}/status', [AgendaController::class, 'updateStatus'])->name('agenda.updateStatus');
     Route::delete('/agenda/{agenda}', [AgendaController::class, 'destroy'])
-    ->name('agenda.destroy')
-    ->middleware(['auth', 'role:admin']);
+        ->name('agenda.destroy')
+        ->middleware(['auth', 'role:admin']);
 });
 
 // ===========================
@@ -146,7 +147,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/settings/agenda', [SettingController::class, 'edit'])->name('settings.edit');
     Route::post('/settings/agenda', [SettingController::class, 'update'])->name('settings.update');
-    
+
     // 👉 Dias especiais de expediente (exceções)
     Route::post('/settings/agenda/excecoes', [SettingController::class, 'storeExcecao'])->name('settings.excecoes.store');
     Route::delete('/settings/agenda/excecoes/{id}', [SettingController::class, 'destroyExcecao'])->name('settings.excecoes.destroy');
@@ -169,7 +170,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 // Relatórios (agendamentos, comissões)
 // ===========================
 Route::prefix('relatorios')
-    ->middleware(['auth','role:admin,funcionario'])
+    ->middleware(['auth', 'role:admin,funcionario'])
     ->group(function () {
         Route::get('/', [RelatorioController::class, 'index'])->name('relatorios.index');
 
@@ -183,7 +184,7 @@ Route::prefix('relatorios')
 // ===========================
 // Relatórios financeiros (APENAS ADMIN)
 // ===========================
-Route::middleware(['auth','role:admin'])->group(function () {
+Route::middleware(['auth', 'role:admin'])->group(function () {
     // Faturamento
     Route::get('/relatorios/faturamento', [RelatorioController::class, 'faturamento'])
         ->name('relatorios.faturamento');
@@ -197,6 +198,19 @@ Route::middleware(['auth','role:admin'])->group(function () {
 
     Route::get('/relatorios/servicos/pdf', [RelatorioController::class, 'servicosPdf'])
         ->name('relatorios.servicos.pdf');
+
+    Route::get('/feedbacks', [FeedbackController::class, 'index'])->name('feedbacks.index');
+    Route::get('/feedbacks/{feedback}', [FeedbackController::class, 'show'])->name('feedbacks.show');
+
 });
+
+// ===========================
+// Logs do sistema (APENAS ADMIN)
+// ===========================
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/logs', [LogController::class, 'index'])->name('logs.index');
+    Route::get('/logs/{id}', [LogController::class, 'show'])->name('logs.show');
+});
+
 
 // EOF

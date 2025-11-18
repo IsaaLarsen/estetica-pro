@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use Carbon\Carbon;
 use App\Services\ComissaoService;
+use App\Services\LogAuditoriaService; // 🔐 NOVO
 
 class AgendaController extends Controller
 {
@@ -125,10 +126,10 @@ class AgendaController extends Controller
         ])->get();
 
         $statusColors = [
-            'agendado'  => ['#3b82f6', '#1d4ed8'],
-            'confirmado'=> ['#10b981', '#059669'],
-            'concluido' => ['#7e22ce', '#6b21a8'],
-            'cancelado' => ['#ef4444', '#dc2626'],
+            'agendado'   => ['#3b82f6', '#1d4ed8'],
+            'confirmado' => ['#10b981', '#059669'],
+            'concluido'  => ['#7e22ce', '#6b21a8'],
+            'cancelado'  => ['#ef4444', '#dc2626'],
         ];
 
         $eventos = $eventosRaw->map(function ($e) use ($statusColors, $tz) {
@@ -176,11 +177,11 @@ class AgendaController extends Controller
                 $fimStr    = $end->toDateTimeString();
 
                 $q->whereBetween('inicio', [$inicioStr, $fimStr])
-                    ->orWhereBetween('fim', [$inicioStr, $fimStr])
-                    ->orWhere(function ($q2) use ($inicioStr, $fimStr) {
-                        $q2->where('inicio', '<=', $inicioStr)
-                           ->where('fim', '>=', $fimStr);
-                    });
+                  ->orWhereBetween('fim', [$inicioStr, $fimStr])
+                  ->orWhere(function ($q2) use ($inicioStr, $fimStr) {
+                      $q2->where('inicio', '<=', $inicioStr)
+                         ->where('fim', '>=', $fimStr);
+                  });
             });
 
         $bloqueios = $bloqueiosQuery->get()->map(function ($b) use ($tz) {
@@ -316,10 +317,10 @@ class AgendaController extends Controller
         ])->get();
 
         $statusColors = [
-            'agendado'  => ['#3b82f6', '#1d4ed8'],
-            'confirmado'=> ['#10b981', '#059669'],
-            'concluido' => ['#7e22ce', '#6b21a8'],
-            'cancelado' => ['#ef4444', '#dc2626'],
+            'agendado'   => ['#3b82f6', '#1d4ed8'],
+            'confirmado' => ['#10b981', '#059669'],
+            'concluido'  => ['#7e22ce', '#6b21a8'],
+            'cancelado'  => ['#ef4444', '#dc2626'],
         ];
 
         $eventos = $eventosRaw->map(function ($e) use ($statusColors, $tz) {
@@ -354,20 +355,20 @@ class AgendaController extends Controller
         $bloqueiosQuery = AgendaBloqueio::query()
             ->where(function ($q) use ($funcionarioId) {
                 $q->where('aplicar_todos', true)
-                    ->orWhereHas('funcionarios', function ($q2) use ($funcionarioId) {
-                        $q2->where('funcionario_id', $funcionarioId);
-                    });
+                  ->orWhereHas('funcionarios', function ($q2) use ($funcionarioId) {
+                      $q2->where('funcionario_id', $funcionarioId);
+                  });
             })
             ->where(function ($q) use ($start, $end) {
                 $inicioStr = $start->toDateTimeString();
                 $fimStr    = $end->toDateTimeString();
 
                 $q->whereBetween('inicio', [$inicioStr, $fimStr])
-                    ->orWhereBetween('fim', [$inicioStr, $fimStr])
-                    ->orWhere(function ($q2) use ($inicioStr, $fimStr) {
-                        $q2->where('inicio', '<=', $inicioStr)
-                           ->where('fim', '>=', $fimStr);
-                    });
+                  ->orWhereBetween('fim', [$inicioStr, $fimStr])
+                  ->orWhere(function ($q2) use ($inicioStr, $fimStr) {
+                      $q2->where('inicio', '<=', $inicioStr)
+                         ->where('fim', '>=', $fimStr);
+                  });
             });
 
         $bloqueios = $bloqueiosQuery->get()->map(function ($b) use ($tz) {
@@ -569,7 +570,7 @@ class AgendaController extends Controller
                 ->withInput();
         }
 
-        Agenda::create([
+        $agenda = Agenda::create([
             'funcionario_id' => $request->funcionario_id,
             'cliente_id'     => $request->cliente_id,
             'servico_id'     => $request->servico_id,
@@ -578,6 +579,9 @@ class AgendaController extends Controller
             'status'         => $request->input('status', 'agendado'),
             'observacoes'    => $request->observacoes,
         ]);
+
+        // 🔐 LOG: criação (usando service genérico)
+        $this->registrarLog('create', $agenda);
 
         // Redireciona para a rota correta baseada no tipo de usuário
         if ($usuario->role === 'funcionario') {
@@ -793,6 +797,9 @@ class AgendaController extends Controller
 
         $antigoStatus = $agenda->status;
 
+        // 🔐 LOG: salvar snapshot antigo ANTES do update
+        $dadosAntigos = $agenda->toArray();
+
         $agenda->update([
             'funcionario_id' => $request->funcionario_id,
             'cliente_id'     => $request->cliente_id,
@@ -802,6 +809,11 @@ class AgendaController extends Controller
             'status'         => $request->status,
             'observacoes'    => $request->observacoes,
         ]);
+
+        $agenda->refresh();
+
+        // 🔐 LOG: atualização com diferenças (service genérico)
+        $this->registrarLog('update', $agenda, $dadosAntigos);
 
         // HOOKS DE COMISSÃO
         if ($request->status === 'concluido' && $antigoStatus !== 'concluido') {
@@ -852,7 +864,15 @@ class AgendaController extends Controller
         }
 
         $antigoStatus = $agenda->status;
+
+        // 🔐 LOG: snapshot antes
+        $dadosAntigos = $agenda->toArray();
+
         $agenda->update(['status' => $request->status]);
+        $agenda->refresh();
+
+        // 🔐 LOG: atualização rápida de status
+        $this->registrarLog('update_status', $agenda, $dadosAntigos);
 
         // HOOKS DE COMISSÃO
         if ($request->status === 'concluido') {
@@ -934,6 +954,9 @@ class AgendaController extends Controller
 
         $agenda = Agenda::findOrFail($id);
 
+        // 🔐 LOG: antes de excluir, guarda tudo (service genérico)
+        $this->registrarLogDelete($agenda);
+
         // Se já tinha comissão, estorna
         if ($agenda->status === 'concluido') {
             ComissaoService::estornarPorAgendaId($agenda->id);
@@ -943,5 +966,21 @@ class AgendaController extends Controller
 
         return redirect()->route('agenda.index')
             ->with('success', 'Agendamento excluído com sucesso!');
+    }
+
+    /**
+     * 🔐 Helper: registra LOG de create/update/update_status (wrappers pro service)
+     */
+    private function registrarLog(string $action, Agenda $agenda, ?array $dadosAntigos = null): void
+    {
+        LogAuditoriaService::registrarModel($action, $agenda, $dadosAntigos);
+    }
+
+    /**
+     * 🔐 Helper: registrar LOG de exclusão
+     */
+    private function registrarLogDelete(Agenda $agenda): void
+    {
+        LogAuditoriaService::registrarDeleteModel($agenda);
     }
 }

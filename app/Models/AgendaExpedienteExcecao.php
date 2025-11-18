@@ -16,25 +16,40 @@ class AgendaExpedienteExcecao extends Model
         'data',
         'inicio',
         'fim',
-        'aplicar_todos',
+        // aplicar_todos não existe aqui, não deve estar no fillable
     ];
 
     protected $casts = [
-        'data'          => 'date',
-        'aplicar_todos' => 'boolean',
+        'data'   => 'date',
+        'inicio' => 'string',
+        'fim'    => 'string',
     ];
 
     /**
-     * Funcionários que terão este expediente especial
-     * (quando NÃO for aplicar_todos).
+     * Funcionários vinculados a esta exceção de expediente.
      */
     public function funcionarios(): BelongsToMany
     {
         return $this->belongsToMany(
             Funcionario::class,
-            'agenda_expediente_excecao_funcionario', // tabela pivot
-            'excecao_id',                            // fk da exceção
-            'funcionario_id'                         // fk do funcionário
+            'agenda_expediente_excecao_funcionario',
+            'excecao_id',
+            'funcionario_id'
         );
+    }
+
+    /**
+     * Enriquecimento do toArray para LOGS
+     */
+    public function toArray()
+    {
+        $arr = parent::toArray();
+
+        // Adiciona nomes dos funcionários
+        $arr['funcionarios_nomes'] = $this->funcionarios
+            ? $this->funcionarios->pluck('nome')->toArray()
+            : [];
+
+        return $arr;
     }
 }
