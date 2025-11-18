@@ -161,13 +161,13 @@
             <a href="{{ route('dashboard') }}" class="nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
                 <i class="fas fa-chart-line"></i><span>Dashboard</span>
             </a>
-            
+
             <!-- CORREÇÃO: Agenda condicional usando role da SESSÃO -->
             @php
                 $user = session('usuario');
                 $isFuncionario = $user && ($user->role === 'funcionario');
             @endphp
-            
+
             @if($isFuncionario)
                 <!-- FUNCIONÁRIO: Vai para Minha Agenda -->
                 <a href="{{ route('minha.agenda') }}" class="nav-item {{ request()->routeIs('minha.agenda*') ? 'active' : '' }}">
@@ -218,6 +218,10 @@
                 <i class="fas fa-file-alt"></i><span>Relatórios</span>
             </a>
 
+            <a href="{{ route('feedbacks.index') }}" class="nav-item {{ request()->routeIs('feedbacks.*') ? 'active' : '' }}">
+                <i class="fas fa-file-alt"></i><span>Feedbacks</span>
+            </a>
+
         </nav>
 
         <div class="sidebar-footer">
@@ -257,7 +261,7 @@
                         @php
                             if ($user) {
                                 $role = $user->role ?? 'usuário';
-                                echo $role === 'funcionario' ? 'Funcionário' : 
+                                echo $role === 'funcionario' ? 'Funcionário' :
                                      ($role === 'admin' ? 'Administrador' : ucfirst($role));
                             } else {
                                 echo 'Visitante';

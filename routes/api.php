@@ -12,7 +12,7 @@ use App\Models\Agenda;
 // Controllers da API
 use App\Http\Controllers\Api\AgendaApiController;
 use App\Http\Controllers\Api\AuthClienteController;
-
+use App\Http\Controllers\Api\FeedbackApiController;
 // Ping
 Route::get('/ping', fn () => response()->json(['ok' => true]));
 
@@ -105,4 +105,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/cliente/me',     [AuthClienteController::class, 'me']);
     Route::post('/auth/cliente/logout',[AuthClienteController::class, 'logout']);
     // aqui você pode adicionar rotas futuras protegidas por token do cliente
+
+     Route::get('/agendamentos', [AgendaApiController::class, 'meusAgendamentos']);
+     Route::delete('/agendamentos/{id}', [AgendaApiController::class, 'cancelar']);
+     Route::post('/feedbacks', [FeedbackApiController::class, 'store']);
 });

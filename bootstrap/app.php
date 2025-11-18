@@ -28,6 +28,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Se preferir só no grupo API, troque a linha acima por:
         // $middleware->group('api', [ CorsSimple::class ]);
+        $middleware->appendToGroup('api', [
+            CorsSimple::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

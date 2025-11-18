@@ -197,52 +197,83 @@ class AgendaApiController extends Controller
      * GET /api/agendamentos?cliente_id=&status=
      * Lista agendamentos do cliente (TEMP: cliente_id via query/body).
      */
-    public function meusAgendamentos(Request $r)
+    public function meusAgendamentos(Request $request)
     {
-        $r->validate([
-            'cliente_id' => 'required|integer|exists:clientes,id', // TEMP p/ Flutter
-            'status'     => 'nullable|in:agendado,confirmado,concluido,cancelado',
-        ]);
+        // cliente autenticado via Sanctum
+        $cliente = $request->user();
 
-        $q = DB::table('agendas')
-            ->join('funcionarios','funcionarios.id','=','agendas.funcionario_id')
-            ->join('servicos','servicos.id','=','agendas.servico_id')
-            ->where('agendas.cliente_id', (int)$r->cliente_id)
-            ->orderBy('agendas.inicio','desc')
-            ->select([
-                'agendas.id','agendas.inicio','agendas.fim','agendas.status','agendas.observacoes',
-                'funcionarios.nome as funcionario',
-                'servicos.nome as servico',
-                'servicos.valor as valor'
-            ]);
-
-        if ($r->filled('status')) {
-            $q->where('agendas.status', $r->get('status'));
+        if (!$cliente) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
-        return response()->json($q->get());
+        $status = $request->query('status');
+
+        $query = Agenda::with(['servico', 'funcionario'])
+            ->where('cliente_id', $cliente->id)
+            ->orderByDesc('inicio');
+
+        if (!empty($status)) {
+            $query->where('status', $status);
+        }
+
+        $agendamentos = $query->get()->map(function (Agenda $a) {
+            return [
+                'id'               => $a->id,
+                'status'           => $a->status,
+                'inicio'           => $a->inicio,
+                'inicio_formatado' => $a->inicio
+                    ? Carbon::parse($a->inicio)->format('d/m/Y H:i')
+                    : null,
+
+                'servico_id'       => $a->servico_id,
+                'servico_nome'     => optional($a->servico)->nome,
+                'servico_valor'    => optional($a->servico)->valor,
+
+                'funcionario_id'   => $a->funcionario_id,
+                'funcionario_nome' => optional($a->funcionario)->nome,
+            ];
+        });
+
+        return response()->json($agendamentos);
     }
+
 
     /**
      * DELETE /api/agendamentos/{id}?cliente_id=
      * Cancela um agendamento do cliente (TEMP: cliente_id na query).
      */
-    public function cancelar(Request $r, $id)
+    public function cancelar(Request $request, $id)
     {
-        $r->validate([
-            'cliente_id' => 'required|integer|exists:clientes,id', // TEMP p/ Flutter
-        ]);
+        // cliente autenticado via Sanctum
+        $cliente = $request->user();
 
-        $ag = Agenda::where('id', (int)$id)
-            ->where('cliente_id', (int)$r->cliente_id)
-            ->firstOrFail();
-
-        $tz = config('app.timezone','America/Sao_Paulo');
-        if (Carbon::parse($ag->inicio,$tz)->isPast()) {
-            return response()->json(['message'=>'Não é possível cancelar após o horário.'], 422);
+        if (!$cliente) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
-        $ag->update(['status'=>'cancelado']);
-        return response()->json(['ok'=>true]);
+        // busca o agendamento que pertence a ESTE cliente
+        $agenda = Agenda::where('id', $id)
+            ->where('cliente_id', $cliente->id)
+            ->first();
+
+        if (!$agenda) {
+            return response()->json(['message' => 'Agendamento não encontrado.'], 404);
+        }
+
+        // só permite cancelar se estiver agendado ou confirmado
+        if (!in_array($agenda->status, ['agendado', 'confirmado'])) {
+            return response()->json([
+                'message' => 'Este agendamento não pode mais ser cancelado.'
+            ], 422);
+        }
+
+        $agenda->status = 'cancelado';
+        $agenda->save();
+
+        return response()->json([
+            'ok'      => true,
+            'message' => 'Agendamento cancelado com sucesso.',
+        ]);
     }
+
 }

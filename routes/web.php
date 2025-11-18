@@ -11,6 +11,7 @@ use App\Http\Controllers\AgendaBloqueioController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\ComissaoController;
 use App\Http\Controllers\RelatorioController;
+use App\Http\Controllers\FeedbackController;
 
 Route::get('/', fn() => redirect()->route('login'));
 
@@ -175,6 +176,10 @@ Route::middleware(['panel','role:admin'])->group(function () {
     // Faturamento
     Route::get('/relatorios/faturamento', [RelatorioController::class, 'faturamento'])
         ->name('relatorios.faturamento');
+
+    Route::get('/feedbacks', [FeedbackController::class, 'index'])->name('feedbacks.index');
+    Route::get('/feedbacks/{feedback}', [FeedbackController::class, 'show'])->name('feedbacks.show');
+
 
     Route::get('/relatorios/faturamento/pdf', [RelatorioController::class, 'faturamentoPdf'])
         ->name('relatorios.faturamento.pdf');
