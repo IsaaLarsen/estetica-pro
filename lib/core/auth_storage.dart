@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AuthStorage {
   static const _key = 'token';
 
+  /// Salva token
   static Future<void> saveToken(String token) async {
     if (kIsWeb) {
       final sp = await SharedPreferences.getInstance();
@@ -15,6 +16,7 @@ class AuthStorage {
     }
   }
 
+  /// Lê token
   static Future<String?> readToken() async {
     if (kIsWeb) {
       final sp = await SharedPreferences.getInstance();
@@ -25,6 +27,7 @@ class AuthStorage {
     }
   }
 
+  /// Remove token
   static Future<void> clearToken() async {
     if (kIsWeb) {
       final sp = await SharedPreferences.getInstance();

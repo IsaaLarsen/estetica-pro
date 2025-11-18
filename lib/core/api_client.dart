@@ -1,38 +1,46 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart'; // kIsWeb
 import 'auth_storage.dart';
 
 class ApiClient {
-  static String get _host {
-    if (kIsWeb) return 'http://127.0.0.1:8000';       // Flutter Web
-    if (Platform.isAndroid) return 'http://10.0.2.2:8000'; // Emulador Android
-    return 'http://127.0.0.1:8000';                   // iOS/mac/desktop
-  }
-
   static Dio build() {
-    final dio = Dio(BaseOptions(
-      baseUrl: '$_host/api',
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 50),
-    ));
+    //
+    // 🔥 IMPORTANTE
+    // PARA FLUTTER WEB, APENAS ESTE ENDEREÇO FUNCIONA:
+    //
+    const webBase = 'http://127.0.0.1:8000/api';
+    const androidBase = 'http://10.0.2.2:8000/api';
 
-    dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) async {
-        final token = await AuthStorage.readToken();
-        if (token != null && token.isNotEmpty) {
-          options.headers['Authorization'] = 'Bearer $token';
-        }
-        handler.next(options);
-      },
-      onError: (e, handler) async {
-        // se o token expirou, limpa e deixa a UI redirecionar para login
-        if (e.response?.statusCode == 401) {
-          await AuthStorage.clearToken();
-        }
-        handler.next(e);
-      },
-    ));
+    final baseUrl = kIsWeb ? webBase : androidBase;
+
+    print('[ApiClient] kIsWeb=$kIsWeb  baseUrl=$baseUrl');
+
+    final dio = Dio(
+      BaseOptions(
+        baseUrl: baseUrl,
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 30),
+        headers: {
+          'Accept': 'application/json',
+        },
+      ),
+    );
+
+    // 🔒 Interceptor para enviar token em todas requisições
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final token = await AuthStorage.readToken(); // ← aqui corrigido
+
+          if (token != null && token.isNotEmpty) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+
+          return handler.next(options);
+        },
+      ),
+    );
+
     return dio;
   }
 }

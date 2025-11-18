@@ -1,3 +1,4 @@
+import 'package:estetica_app/features/agendamento/meus_agendamentos_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -97,6 +98,18 @@ class _ServicosPageState extends ConsumerState<ServicosPage> {
                         hint: 'Buscar serviço...',
                         onChanged: (_) => setState(() {}),
                       ),
+                    ),
+
+                    // botão: Meus agendamentos
+                    IconButton(
+                      tooltip: 'Meus agendamentos',
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const MeusAgendamentosPage()),
+                        );
+                      },
+                      icon: const Icon(Icons.history, color: DSColors.text),
                     ),
                     const SizedBox(width: 12),
                     if (_clienteNome != null)
