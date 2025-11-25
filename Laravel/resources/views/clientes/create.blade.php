@@ -36,44 +36,44 @@
         textarea{ min-height:120px; resize:vertical; }
 
         /* Switch - CORRIGIDO PARA CENTRALIZAR */
-        .form-switch{ 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            gap: 12px; 
-            background: #f9fafb; 
-            padding: 16px 24px; 
-            border-radius: 12px; 
+        .form-switch{
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            background: #f9fafb;
+            padding: 16px 24px;
+            border-radius: 12px;
             border: 2px solid #e5e7eb;
             width: fit-content;
             margin: 0 auto;
         }
-        .switch{ 
-            position: relative; 
-            display: inline-block; 
-            width: 50px; 
-            height: 24px; 
+        .switch{
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
             margin: 0;
         }
         .switch input{ opacity:0; width:0; height:0; }
-        .slider{ 
-            position: absolute; 
-            inset: 0; 
-            cursor: pointer; 
-            background: #ccc; 
-            transition: .4s; 
-            border-radius: 24px; 
+        .slider{
+            position: absolute;
+            inset: 0;
+            cursor: pointer;
+            background: #ccc;
+            transition: .4s;
+            border-radius: 24px;
         }
-        .slider:before{ 
-            content: ""; 
-            position: absolute; 
-            height: 18px; 
-            width: 18px; 
-            left: 3px; 
-            bottom: 3px; 
-            background: #fff; 
-            transition: .4s; 
-            border-radius: 50%; 
+        .slider:before{
+            content: "";
+            position: absolute;
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background: #fff;
+            transition: .4s;
+            border-radius: 50%;
         }
         input:checked + .slider{ background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 100%); }
         input:checked + .slider:before{ transform:translateX(26px); }
@@ -127,7 +127,7 @@
 
                 <div class="form-grid">
                     <div class="form-group">
-                        <label for="nome">Nome *</label>
+                        <label for="nome">Nome Completo</label>
                         <input id="nome" name="nome" type="text" required placeholder="Nome completo do cliente"
                                value="{{ old('nome', $cliente->nome ?? '') }}">
                     </div>
@@ -151,15 +151,34 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="email">Email</label>
+                        <label for="email">E-mail</label>
                         <input id="email" name="email" type="email" placeholder="cliente@email.com"
                                value="{{ old('email', $cliente->email ?? '') }}">
                     </div>
 
-                    <div class="form-group full-width">
-                        <label for="endereco">Endereço</label>
-                        <input id="endereco" name="endereco" type="text" placeholder="Endereço completo"
-                               value="{{ old('endereco', $cliente->endereco ?? '') }}">
+                    {{-- CEP / Rua / Número / Bairro --}}
+                    <div class="form-group">
+                        <label for="cep">CEP</label>
+                        <input id="cep" name="cep" type="text" placeholder="00000-000"
+                               value="{{ old('cep', $cliente->cep ?? '') }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="rua">Rua</label>
+                        <input id="rua" name="rua" type="text" placeholder="Nome da rua"
+                               value="{{ old('rua', $cliente->rua ?? '') }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="numero">Número</label>
+                        <input id="numero" name="numero" type="text" placeholder="Número"
+                               value="{{ old('numero', $cliente->numero ?? '') }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="bairro">Bairro</label>
+                        <input id="bairro" name="bairro" type="text" placeholder="Bairro"
+                               value="{{ old('bairro', $cliente->bairro ?? '') }}">
                     </div>
 
                     {{-- Switch: Cliente ativo (AGORA CORRETAMENTE CENTRALIZADO) --}}
@@ -204,7 +223,9 @@
         const tel = document.getElementById('telefone');
         if (tel) tel.addEventListener('input', e => {
             let v = e.target.value.replace(/\D/g,'');
-            v = v.replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{4})\d+?$/,'$1');
+            v = v.replace(/(\d{2})(\d)/,'($1) $2')
+                 .replace(/(\d{5})(\d)/,'$1-$2')
+                 .replace(/(-\d{4})\d+?$/,'$1');
             e.target.value = v;
         });
 
@@ -212,9 +233,46 @@
         const cpf = document.getElementById('cpf');
         if (cpf) cpf.addEventListener('input', e => {
             let v = e.target.value.replace(/\D/g,'');
-            v = v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');
+            v = v.replace(/(\d{3})(\d)/,'$1.$2')
+                 .replace(/(\d{3})(\d)/,'$1.$2')
+                 .replace(/(\d{3})(\d{1,2})$/,'$1-$2');
             e.target.value = v;
         });
+
+        // Máscara CEP
+        const cepInput = document.getElementById('cep');
+        if (cepInput) {
+            cepInput.addEventListener('input', e => {
+                let v = e.target.value.replace(/\D/g, '');
+                if (v.length > 8) v = v.slice(0, 8);
+                if (v.length > 5) {
+                    v = v.replace(/(\d{5})(\d{1,3})/, '$1-$2');
+                }
+                e.target.value = v;
+            });
+
+            // ViaCEP - preenche Rua e Bairro automaticamente
+            cepInput.addEventListener('blur', function () {
+                const somenteNumeros = this.value.replace(/\D/g, '');
+
+                if (somenteNumeros.length !== 8) {
+                    return;
+                }
+
+                fetch(`https://viacep.com.br/ws/${somenteNumeros}/json/`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.erro) return;
+
+                        const rua   = document.getElementById('rua');
+                        const bairro = document.getElementById('bairro');
+
+                        if (rua && !rua.value)   rua.value   = data.logradouro || '';
+                        if (bairro && !bairro.value) bairro.value = data.bairro || '';
+                    })
+                    .catch(err => console.error('Erro ao buscar CEP:', err));
+            });
+        }
 
         // Remover senha padrão em edição
         document.getElementById('clienteForm').addEventListener('submit', () => {

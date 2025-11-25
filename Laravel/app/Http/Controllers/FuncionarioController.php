@@ -80,13 +80,18 @@ class FuncionarioController extends Controller
             'email'           => 'required|email|unique:funcionarios,email',
             'cargo'           => 'required|exists:cargos,nome',
             'telefone'        => 'nullable|string|max:20',
-            'endereco'        => 'nullable|string|max:255',
             'data_nascimento' => [
                 'nullable',
                 'date',
                 'regex:/^\d{4}-\d{2}-\d{2}$/',
             ],
-            'ativo'           => 'nullable|boolean'
+            'ativo'           => 'nullable|boolean',
+
+            // NOVOS CAMPOS
+            'cep'             => 'nullable|string|max:9',
+            'rua'             => 'nullable|string|max:255',
+            'bairro'          => 'nullable|string|max:255',
+            'numero'          => 'nullable|string|max:10',
         ], [
             'data_nascimento.regex' => 'Data de nascimento inválida.',
         ]);
@@ -100,9 +105,15 @@ class FuncionarioController extends Controller
             'email'           => $request->email,
             'cargo'           => $request->cargo,
             'telefone'        => $request->telefone,
-            'endereco'        => $request->endereco,
             'data_nascimento' => $request->data_nascimento,
             'ativo'           => $request->boolean('ativo') ? 1 : 0,
+
+            // NOVOS CAMPOS
+            'cep'             => $request->cep,
+            'rua'             => $request->rua,
+            'bairro'          => $request->bairro,
+            'numero'          => $request->numero,
+
             'created_at'      => now(),
             'updated_at'      => now(),
         ]);
@@ -161,13 +172,18 @@ class FuncionarioController extends Controller
             'email'           => 'required|email|unique:funcionarios,email,' . $id,
             'cargo'           => 'required|exists:cargos,nome',
             'telefone'        => 'nullable|string|max:20',
-            'endereco'        => 'nullable|string|max:255',
             'data_nascimento' => [
                 'nullable',
                 'date',
                 'regex:/^\d{4}-\d{2}-\d{2}$/',
             ],
-            'ativo'           => 'nullable|boolean'
+            'ativo'           => 'nullable|boolean',
+
+            // NOVOS CAMPOS
+            'cep'             => 'nullable|string|max:9',
+            'rua'             => 'nullable|string|max:255',
+            'bairro'          => 'nullable|string|max:255',
+            'numero'          => 'nullable|string|max:10',
         ], [
             'data_nascimento.regex' => 'Data de nascimento inválida.',
         ]);
@@ -190,9 +206,15 @@ class FuncionarioController extends Controller
             'email'           => $request->email,
             'cargo'           => $request->cargo,
             'telefone'        => $request->telefone,
-            'endereco'        => $request->endereco,
             'data_nascimento' => $request->data_nascimento,
             'ativo'           => $request->boolean('ativo') ? 1 : 0,
+
+            // NOVOS CAMPOS
+            'cep'             => $request->cep,
+            'rua'             => $request->rua,
+            'bairro'          => $request->bairro,
+            'numero'          => $request->numero,
+
             'updated_at'      => now(),
         ]);
 

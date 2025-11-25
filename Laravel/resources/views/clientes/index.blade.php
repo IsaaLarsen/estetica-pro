@@ -93,6 +93,26 @@
                 </thead>
                 <tbody>
                     @forelse ($clientes as $c)
+                        @php
+                            // Monta endereço com os novos campos
+                            $partes = [];
+
+                            if (!empty($c->rua)) {
+                                $partes[] = $c->rua;
+                            }
+                            if (!empty($c->numero)) {
+                                // Se já tiver rua, vira "Rua, 123"
+                                $partes[count($partes)-1] = ($partes[count($partes)-1] ?? '') . (empty($partes) ? $c->numero : ', ' . $c->numero);
+                            }
+                            if (!empty($c->bairro)) {
+                                $partes[] = $c->bairro;
+                            }
+
+                            $endereco = trim(implode(' - ', $partes));
+                            if (empty($endereco) && !empty($c->cep)) {
+                                $endereco = $c->cep;
+                            }
+                        @endphp
                         <tr>
                             <td>
                                 <div class="employee-info">
@@ -108,7 +128,7 @@
                             <td>{{ $c->cpf ?? '—' }}</td>
                             <td>{{ $c->telefone ?? '—' }}</td>
                             <td>{{ $c->email ?? '—' }}</td>
-                            <td>{{ $c->endereco ?? '—' }}</td>
+                            <td>{{ $endereco !== '' ? $endereco : '—' }}</td>
                             <td>
                                 @php $ativo = $c->ativo ?? 1; @endphp
                                 <span class="status-badge {{ $ativo ? 'status-active' : 'status-inactive' }}">

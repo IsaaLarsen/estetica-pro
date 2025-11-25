@@ -323,11 +323,53 @@
                         @error('cargo') <small class="text-danger">{{ $message }}</small> @enderror
                     </div>
 
-                    <div class="form-group full-width">
-                        <label for="endereco">Endereço</label>
-                        <textarea id="endereco" name="endereco" rows="3"
-                                  placeholder="Digite o endereço completo">{{ old('endereco', $funcionario->endereco ?? '') }}</textarea>
-                        @error('endereco') <small class="text-danger">{{ $message }}</small> @enderror
+                    {{-- NOVO: CEP / Rua / Número / Bairro --}}
+                    <div class="form-group">
+                        <label for="cep">CEP</label>
+                        <input
+                            type="text"
+                            id="cep"
+                            name="cep"
+                            placeholder="00000-000"
+                            value="{{ old('cep', $funcionario->cep ?? '') }}"
+                        >
+                        @error('cep') <small class="text-danger">{{ $message }}</small> @enderror
+                    </div>
+
+                    <div class="form-group">
+                        <label for="rua">Rua</label>
+                        <input
+                            type="text"
+                            id="rua"
+                            name="rua"
+                            placeholder="Nome da rua"
+                            value="{{ old('rua', $funcionario->rua ?? '') }}"
+                        >
+                        @error('rua') <small class="text-danger">{{ $message }}</small> @enderror
+                    </div>
+
+                    <div class="form-group">
+                        <label for="numero">Número</label>
+                        <input
+                            type="text"
+                            id="numero"
+                            name="numero"
+                            placeholder="Número"
+                            value="{{ old('numero', $funcionario->numero ?? '') }}"
+                        >
+                        @error('numero') <small class="text-danger">{{ $message }}</small> @enderror
+                    </div>
+
+                    <div class="form-group">
+                        <label for="bairro">Bairro</label>
+                        <input
+                            type="text"
+                            id="bairro"
+                            name="bairro"
+                            placeholder="Bairro"
+                            value="{{ old('bairro', $funcionario->bairro ?? '') }}"
+                        >
+                        @error('bairro') <small class="text-danger">{{ $message }}</small> @enderror
                     </div>
 
                     {{-- Switch: Funcionário ativo --}}
@@ -355,6 +397,70 @@
             </form>
         </div>
     </div>
+
+    {{-- Scripts específicos (máscaras + ViaCEP) --}}
+    <script>
+        // Máscara CPF
+        const cpfInput = document.getElementById('cpf');
+        if (cpfInput) {
+            cpfInput.addEventListener('input', e => {
+                let v = e.target.value.replace(/\D/g,'');
+                v = v.replace(/(\d{3})(\d)/,'$1.$2')
+                     .replace(/(\d{3})(\d)/,'$1.$2')
+                     .replace(/(\d{3})(\d{1,2})$/,'$1-$2');
+                e.target.value = v;
+            });
+        }
+
+        // Máscara telefone
+        const telInput = document.getElementById('telefone');
+        if (telInput) {
+            telInput.addEventListener('input', e => {
+                let v = e.target.value.replace(/\D/g,'');
+                v = v.replace(/(\d{2})(\d)/,'($1) $2')
+                     .replace(/(\d{5})(\d)/,'$1-$2')
+                     .replace(/(-\d{4})\d+?$/,'$1');
+                e.target.value = v;
+            });
+        }
+
+        // Máscara + ViaCEP
+        const cepInput = document.getElementById('cep');
+        if (cepInput) {
+            cepInput.addEventListener('input', e => {
+                let v = e.target.value.replace(/\D/g, '');
+                if (v.length > 8) v = v.slice(0, 8);
+                if (v.length > 5) {
+                    v = v.replace(/(\d{5})(\d{1,3})/, '$1-$2');
+                }
+                e.target.value = v;
+            });
+
+            cepInput.addEventListener('blur', function () {
+                const somenteNumeros = this.value.replace(/\D/g, '');
+                if (somenteNumeros.length !== 8) {
+                    return;
+                }
+
+                fetch(`https://viacep.com.br/ws/${somenteNumeros}/json/`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.erro) return;
+
+                        const rua    = document.getElementById('rua');
+                        const bairro = document.getElementById('bairro');
+
+                        if (rua && !rua.value) {
+                            rua.value = data.logradouro || '';
+                        }
+                        if (bairro && !bairro.value) {
+                            bairro.value = data.bairro || '';
+                        }
+                    })
+                    .catch(err => console.error('Erro ao buscar CEP:', err));
+            });
+        }
+    </script>
 
     @include('partials.change_password_modal')
     @include('partials.toast')

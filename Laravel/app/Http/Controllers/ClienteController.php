@@ -57,10 +57,15 @@ class ClienteController extends Controller
             'cpf'             => 'required|string|max:18|unique:clientes,cpf',
             'telefone'        => 'nullable|string|max:30',
             'email'           => 'nullable|email|max:255|unique:clientes,email',
-            'endereco'        => 'nullable|string|max:255',
             'data_nascimento' => 'nullable|date',
             'senha'           => 'required|string|min:6',
             'ativo'           => 'nullable|boolean',
+
+            // NOVOS CAMPOS
+            'cep'             => 'nullable|string|max:9',
+            'rua'             => 'nullable|string|max:255',
+            'bairro'          => 'nullable|string|max:255',
+            'numero'          => 'nullable|string|max:10',
         ]);
 
         $cpf      = preg_replace('/\D+/', '', (string) $request->cpf);
@@ -72,10 +77,16 @@ class ClienteController extends Controller
             'cpf'             => $cpf,
             'telefone'        => $telefone,
             'email'           => $request->email,
-            'endereco'        => $request->endereco,
             'data_nascimento' => $request->data_nascimento,
             'senha'           => Hash::make($request->senha),
             'ativo'           => $request->boolean('ativo') ? 1 : 0,
+
+            // NOVOS CAMPOS
+            'cep'             => $request->cep,
+            'rua'             => $request->rua,
+            'bairro'          => $request->bairro,
+            'numero'          => $request->numero,
+
             'created_at'      => now(),
             'updated_at'      => now(),
         ]);
@@ -115,10 +126,15 @@ class ClienteController extends Controller
             'cpf'             => 'required|string|max:18|unique:clientes,cpf,' . $id,
             'telefone'        => 'nullable|string|max:30',
             'email'           => 'nullable|email|max:255|unique:clientes,email,' . $id,
-            'endereco'        => 'nullable|string|max:255',
             'data_nascimento' => 'nullable|date',
             'senha'           => 'nullable|string|min:6', // opcional ao editar
             'ativo'           => 'nullable|boolean',
+
+            // NOVOS CAMPOS
+            'cep'             => 'nullable|string|max:9',
+            'rua'             => 'nullable|string|max:255',
+            'bairro'          => 'nullable|string|max:255',
+            'numero'          => 'nullable|string|max:10',
         ]);
 
         $cpf      = preg_replace('/\D+/', '', (string) $request->cpf);
@@ -133,9 +149,15 @@ class ClienteController extends Controller
             'cpf'             => $cpf,
             'telefone'        => $telefone,
             'email'           => $request->email,
-            'endereco'        => $request->endereco,
             'data_nascimento' => $request->data_nascimento,
             'ativo'           => $request->boolean('ativo') ? 1 : 0,
+
+            // NOVOS CAMPOS
+            'cep'             => $request->cep,
+            'rua'             => $request->rua,
+            'bairro'          => $request->bairro,
+            'numero'          => $request->numero,
+
             'updated_at'      => now(),
         ];
 
