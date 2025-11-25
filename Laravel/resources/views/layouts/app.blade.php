@@ -22,7 +22,6 @@
             --text: #1f2937;
             --text-light: #6b7280;
             --sidebar-width: 260px;
-            /* 👇 tamanho base do texto */
             --base-font-size: 14px;
         }
 
@@ -40,47 +39,6 @@
             display: flex;
             font-size: var(--base-font-size);
             line-height: 1.5;
-        }
-
-        /* ===== TAMANHO DE FONTE (ACESSIBILIDADE) ===== */
-        body.font-md {
-            --base-font-size: 16px;
-        }
-
-        body.font-lg {
-            --base-font-size: 18px;
-        }
-
-        body.font-xl {
-            --base-font-size: 20px;
-        }
-
-        .accessibility-toolbar {
-            display: flex;
-            gap: 6px;
-            align-items: center;
-        }
-
-        .btn-font {
-            border: 1px solid #e5e7eb;
-            background: #fff;
-            padding: 2px 8px;
-            border-radius: 999px;
-            cursor: pointer;
-            font-size: 12px;
-            line-height: 1;
-            transition: .15s;
-        }
-
-        .btn-font:hover {
-            background: #f3f4f6;
-        }
-
-        .btn-font.active {
-            background: var(--primary-light);
-            border-color: var(--primary);
-            color: var(--primary-dark);
-            font-weight: 600;
         }
 
         /* ===== ACESSIBILIDADE GERAL ===== */
@@ -355,10 +313,22 @@
             flex: 1;
         }
 
-        /* Responsividade */
+        /* Responsividade (MOBILE) */
         @media (max-width: 768px) {
             .sidebar {
                 width: 70px;
+            }
+
+            /* some o header pra não ficar espaço vazio */
+            .sidebar-header {
+                display: none;
+                padding: 0;
+                border-bottom: none;
+            }
+
+            /* ajusta padding pra ícone ficar logo no topo */
+            .sidebar-nav {
+                padding: 16px 8px;
             }
 
             .sidebar-header h1,
@@ -370,7 +340,7 @@
             .nav-item,
             .logout-btn {
                 justify-content: center;
-                padding: 16px;
+                padding: 16px 0;
             }
 
             .nav-item i,
@@ -654,22 +624,6 @@
                 </button>
 
                 <div class="settings-menu" id="settingsMenu" role="menu" aria-label="Menu de configurações">
-                    <!-- Controle de tamanho de texto -->
-                    <div class="menu-item"
-                         role="none"
-                         style="flex-direction: column; align-items: flex-start; gap: 6px;">
-                        <span style="font-size: 13px; color: var(--text-light);">
-                            Tamanho do texto
-                        </span>
-                        <div class="accessibility-toolbar">
-                            <button type="button" class="btn-font" data-font="md">A</button>
-                            <button type="button" class="btn-font" data-font="lg">A+</button>
-                            <button type="button" class="btn-font" data-font="xl">A++</button>
-                        </div>
-                    </div>
-
-                    <div class="menu-divider"></div>
-
                     <div class="menu-item" id="editPasswordBtn" role="menuitem" tabindex="0">
                         <i class="fas fa-key" aria-hidden="true"></i>
                         <span>Editar Senha</span>
@@ -712,43 +666,6 @@
                 }
             });
         }
-
-        // ===== Controle de tamanho do texto (A / A+ / A++) =====
-        (function () {
-            const BODY = document.body;
-            const STORAGE_KEY = 'ep_font_size';
-            const buttons = document.querySelectorAll('.btn-font');
-
-            function applyFontSize(size) {
-                BODY.classList.remove('font-md', 'font-lg', 'font-xl');
-
-                if (size) {
-                    BODY.classList.add(`font-${size}`);
-                    localStorage.setItem(STORAGE_KEY, size);
-                } else {
-                    localStorage.removeItem(STORAGE_KEY);
-                }
-
-                buttons.forEach(btn => {
-                    btn.classList.toggle('active', btn.dataset.font === size);
-                });
-            }
-
-            // Aplica tamanho salvo (se existir)
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) {
-                applyFontSize(saved);
-            }
-
-            // Clique nos botões do menu
-            buttons.forEach(btn => {
-                btn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    const size = btn.dataset.font;
-                    applyFontSize(size);
-                });
-            });
-        })();
     </script>
 
     <!-- ========= MODAL GLOBAL DE CONFIRMAÇÃO ========= -->
